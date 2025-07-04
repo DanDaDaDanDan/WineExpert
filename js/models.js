@@ -260,6 +260,7 @@ export class AIModels {
         const body = {
             model: this.app.openaiModel,
             messages: messages,
+            response_format: { type: "json_object" },
             max_tokens: 16384
         };
         
@@ -276,7 +277,7 @@ export class AIModels {
                 'Authorization': `Bearer ${this.app.openaiKey}`
             },
             body,
-            (data) => ({ message: data.choices[0].message.content })
+            (data) => this.safeJSONParse(data.choices[0].message.content)
         );
     }
     
@@ -335,6 +336,7 @@ export class AIModels {
             ],
             generationConfig: {
                 temperature: this.app.effectiveTemperature,
+                responseMimeType: "application/json",
                 maxOutputTokens: 8192
             }
         };
@@ -348,7 +350,7 @@ export class AIModels {
                 'Content-Type': 'application/json',
             },
             body,
-            (data) => ({ message: data.candidates[0].content.parts[0].text })
+            (data) => this.safeJSONParse(data.candidates[0].content.parts[0].text)
         );
     }
     
@@ -401,6 +403,7 @@ export class AIModels {
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: userPrompt }
             ],
+            response_format: { type: "json_object" },
             temperature: this.app.effectiveTemperature,
             max_tokens: 131072
         };
@@ -413,7 +416,7 @@ export class AIModels {
                 'Authorization': `Bearer ${this.app.xaiKey}`
             },
             body,
-            (data) => ({ message: data.choices[0].message.content })
+            (data) => this.safeJSONParse(data.choices[0].message.content)
         );
     }
     
@@ -463,6 +466,7 @@ export class AIModels {
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: userPrompt }
             ],
+            response_format: { type: "json_object" },
             temperature: this.app.effectiveTemperature,
             max_tokens: 8192
         };
@@ -475,7 +479,7 @@ export class AIModels {
                 'Authorization': `Bearer ${this.app.deepseekKey}`
             },
             body,
-            (data) => ({ message: data.choices[0].message.content })
+            (data) => this.safeJSONParse(data.choices[0].message.content)
         );
     }
     

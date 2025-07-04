@@ -62,23 +62,24 @@ export class ChatManager {
             if (hasImage && imageDataUrl) {
                 // Use selected provider's Vision API for image analysis
                 const winePrompt = `FAST TEXT EXTRACTION: List each wine line from the image as simple JSON.
-Don't parse or analyze - just transcribe what you see.
 
-For each wine line, return:
-{"name": "wine text", "glass_price": "$XX", "bottle_price": "$XX"}
+TASK: Extract wine names and prices exactly as shown. Don't research or analyze - just transcribe.
 
-Rules:
+RULES:
 - ONE wine per line
 - Capture glass price AND bottle price separately if visible
 - Use null if a price type isn't shown
-- If BOTH glass and bottle prices exist, capture both
-- NO web search, NO added info
-- SPEED is priority - raw text only
+- Extract full wine text exactly as displayed
+- NO web search, NO additional info
 
-Return JSON:
+RESPONSE FORMAT: Return valid JSON with this exact structure:
 {
   "wines": [
-    {"name": "full wine text as shown", "glass_price": "$12", "bottle_price": "$48"}
+    {
+      "name": "full wine text exactly as shown",
+      "glass_price": "$XX or null",
+      "bottle_price": "$XX or null"
+    }
   ]
 }`;
 
@@ -138,14 +139,32 @@ Return JSON:
                 }
             } else {
                 // Regular text processing using selected provider
-                let systemPrompt = "You are a wine expert assistant. Help the user with their wine-related questions.";
+                let systemPrompt = `You are a wine expert assistant. Help the user with their wine-related questions.
+
+IMPORTANT: Always respond with valid JSON in this format:
+{
+  "message": "your detailed response here"
+}`;
                 
                 // Include wine list context if available
                 if (this.app.currentWineList && this.app.currentWineList.wines && this.app.currentWineList.wines.length > 0) {
                     const wineContext = JSON.stringify(this.app.currentWineList, null, 2);
-                    console.log('Passing wine context to LLM:', wineContext); // Debug log
+                    console.log('=== Wine Context Being Passed to LLM ===');
+                    console.log('Wine count:', this.app.currentWineList.wines.length);
+                    console.log('Context length:', wineContext.length);
+                    console.log('Wine context:', wineContext);
+                    console.log('=== End Wine Context ===');
+                    
+                    // Check what data is actually available
+                    const contextSummary = this.app.currentWineList.wines.map((wine, index) => {
+                        return `Wine ${index + 1}: ${wine.name} - Menu: ${wine.menu_price || 'N/A'}, Retail: ${wine.retail_price || 'N/A'}, Ratings: ${wine.ratings ? 'Yes' : 'No'}, Notes: ${wine.tasting_notes ? 'Yes' : 'No'}`;
+                    }).join('\n');
+                    console.log('Context summary:', contextSummary);
+                    
                     systemPrompt += "\n\nCurrent wine list context (includes menu prices, retail prices, ratings, tasting notes, food pairings, producer, vintage, region, varietal, and sources):\n" + wineContext;
                     userInput = `Based on the detailed wine information provided in the system context, ${userInput}`;
+                } else {
+                    console.log('No wine context available for chat query');
                 }
                 
                 switch(this.app.selectedProvider) {
@@ -220,6 +239,7 @@ Return JSON:
                     timestamp: new Date().toISOString()
                 });
             } else {
+                // Handle structured chat response
                 this.app.messages.push({
                     sender: 'Wine Expert',
                     content: response.message || JSON.stringify(response, null, 2),
@@ -465,19 +485,21 @@ For each wine in the EXACT SAME ORDER, research and return:
 4. **Food pairing** - Recommended dishes and cuisines
 5. **Wine details** - Producer, vintage, region, varietal, style
 
-IMPORTANT: Return wines in the EXACT same order as the input list. Include the menu pricing information provided.
+Return valid JSON with one wine object for each input wine. Maintain exact same order as input.`;
 
-Return valid JSON with one wine object for each input wine:
+        const systemPrompt = `You are a wine research expert. Search the web for current, accurate wine information from reputable sources like Vivino, Wine-Searcher, Wine.com, and Wine Spectator. 
+
+RESPONSE FORMAT: Return valid JSON with this exact structure:
 {
   "wines": [
     {
       "name": "exact wine name from list",
       "menu_price": "menu price from input if available",
-      "menu_price_note": "note about glass conversion if applicable",
+      "menu_price_note": "note about glass conversion if applicable", 
       "retail_price": "$XX average retail",
       "ratings": {
         "vivino": "X.X/5 (XXX reviews)",
-        "wine_spectator": "XX points",  
+        "wine_spectator": "XX points",
         "other": "additional scores"
       },
       "tasting_notes": "flavor profile summary",
@@ -485,15 +507,13 @@ Return valid JSON with one wine object for each input wine:
       "sources": ["source1", "source2"],
       "producer": "winery name",
       "vintage": "year",
-      "region": "wine region", 
-      "varietal": "grape varieties",
+      "region": "wine region",
+      "varietal": "grape varieties", 
       "alcohol_content": "XX%",
       "style": "wine style description"
     }
   ]
 }`;
-
-        const systemPrompt = "You are a wine research expert. Search the web for current, accurate wine information from reputable sources like Vivino, Wine-Searcher, Wine.com, and Wine Spectator. Include both the menu pricing information provided and the retail pricing you research.";
 
         // Use the selected provider for research
         let result;
@@ -516,6 +536,8 @@ Return valid JSON with one wine object for each input wine:
             
             // Validate and enhance research results
             if (result && result.wines && Array.isArray(result.wines)) {
+                console.log('Found valid wines array with', result.wines.length, 'wines');
+                
                 result.wines = result.wines.map((researchedWine, index) => {
                     const extractedWine = extractedWines[index];
                     if (!extractedWine) return researchedWine;
@@ -534,6 +556,7 @@ Return valid JSON with one wine object for each input wine:
                 console.log('Enhanced research result:', result);
             } else {
                 console.warn('Research result missing wines array, creating fallback');
+                console.warn('Result structure:', result);
                 // Create fallback result with basic extracted data
                 result = {
                     wines: extractedWines.map(wine => ({
