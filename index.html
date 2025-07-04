@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Wine Expert - AI-Powered Wine Analysis</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍷</text></svg>">
+    <link rel="stylesheet" href="styles.css">
+    <script type="module" src="js/app.js"></script>
+</head>
+<body x-data="wineExpertApp()"
+    <div class="app-container">
+        <!-- Navigation -->
+        <nav class="nav-bar">
+            <div class="nav-content">
+                <h1 class="app-title">Wine Expert</h1>
+                <div class="nav-buttons">
+                    <button @click="currentView = 'chat'" :class="{'active': currentView === 'chat'}">Chat</button>
+                    <button @click="currentView = 'wines'" :class="{'active': currentView === 'wines'}">Wines</button>
+                    <button @click="currentView = 'settings'" :class="{'active': currentView === 'settings'}">Settings</button>
+                    <button @click="currentView = 'debug'" :class="{'active': currentView === 'debug'}">Debug</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+                    <!-- Chat View -->
+        <div x-show="currentView === 'chat'" class="chat-view">
+                <!-- Chat Interface - Now Full Width -->
+                <div class="chat-panel-full">
+                    <div class="chat-messages" x-ref="chatMessages">
+                        <template x-for="(message, index) in messages" :key="index">
+                            <div :class="getMessageClass(message)">
+                                <div class="message-sender" x-text="message.sender"></div>
+                                <div class="message-bubble">
+                                    <div>
+                                        <div x-html="message.content.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')"></div>
+                                        <img x-show="message.image" :src="message.image" alt="Uploaded image" />
+                                    </div>
+                                    </div>
+                                
+                            </div>
+                        </template>
+
+                        
+                        <!-- AI Thinking Indicator -->
+                        <div x-show="processing" class="message-left thinking-indicator">
+                            <div class="message-bubble thinking-bubble">
+                                <div class="thinking-dots">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </div>
+                            </div>
+                            <div class="message-sender">AI is thinking...</div>
+                        </div>
+                    </div>
+                    <div class="chat-input">
+                        <input 
+                            type="file" 
+                            x-ref="imageInput"
+                            @change="handleImageUpload($event)"
+                            accept="image/*"
+                            style="display: none;"
+                            id="wine-image-upload"
+                        />
+                        <button 
+                            @click="$refs.imageInput.click()" 
+                            class="upload-button"
+                            :disabled="!apiKey || processing"
+                            title="Upload and analyze wine image"
+                        >
+                            📷
+                        </button>
+                        <button 
+                            x-show="currentWineList && currentWineList.wines && currentWineList.wines.length > 0"
+                            @click="currentWineList = null; extractedWineList = null; imageUploaded = false; messages.push({sender: 'System', content: 'Wine list context cleared. Upload a new wine image to start analyzing.', type: 'system'})" 
+                            class="clear-context-button"
+                            :disabled="processing"
+                            title="Clear wine list context"
+                        >
+                            🗑️
+                        </button>
+                        <textarea 
+                            x-model="currentInput" 
+                            @keydown="handleInputKeydown($event)"
+                            :placeholder="imageUploaded ? 'Ask me about the wines...' : 'Upload a wine image first using the camera button'"
+                            :disabled="!apiKey || processing || !imageUploaded"
+                            rows="1"
+                        ></textarea>
+                        <button @click="sendMessage()" :disabled="!apiKey || processing || !currentInput.trim() || !imageUploaded" class="send-button">
+                            <span x-show="!processing">↑</span>
+                            <span x-show="processing">...</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wines View -->
+            <div x-show="currentView === 'wines'" class="wines-view">
+                <div class="wines-container">
+                    <div class="wines-header">
+                        <h2>Wine Collection</h2>
+                        <p x-show="processing" class="wines-processing">
+                            🔍 Analyzing wines and researching detailed information...
+                        </p>
+                        <p x-show="!processing && (!currentWineList || !currentWineList.wines || currentWineList.wines.length === 0)" class="wines-empty">
+                            No wines analyzed yet. Upload an image in the Chat tab to analyze wines.
+                        </p>
+                        <p x-show="!processing && currentWineList && currentWineList.wines && currentWineList.wines.length > 0" class="wines-count">
+                            <span x-text="currentWineList && currentWineList.wines ? currentWineList.wines.length : 0"></span> wine<span x-show="currentWineList && currentWineList.wines && currentWineList.wines.length > 1">s</span> in collection
+                        </p>
+                    </div>
+                    
+                    <div x-show="!processing && currentWineList && currentWineList.wines && currentWineList.wines.length > 0" class="wines-grid">
+                        <template x-for="(wine, index) in (currentWineList ? currentWineList.wines : [])" :key="index">
+                            <div class="wine-card">
+                                <div class="wine-header">
+                                    <h3 x-text="wine.name"></h3>
+                                </div>
+                                <div class="wine-details">
+                                    <!-- Menu Price -->
+                                    <div class="wine-section" x-show="wine.menu_price">
+                                        <h4>Menu Price</h4>
+                                        <div class="wine-detail">
+                                            <span class="wine-label">Bottle:</span>
+                                            <span class="wine-price-value" x-text="wine.menu_price"></span>
+                                        </div>
+                                        <div class="wine-detail" x-show="wine.menu_price_note">
+                                            <span class="wine-label-small">Note:</span>
+                                            <span class="wine-note-small" x-text="wine.menu_price_note"></span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Wine Details -->
+                                    <div class="wine-section" x-show="wine.producer || wine.vintage || wine.region || wine.varietal || wine.alcohol_content || wine.style">
+                                        <h4>Wine Details</h4>
+                                        <div class="wine-detail" x-show="wine.producer">
+                                            <span class="wine-label">Producer:</span>
+                                            <span x-text="wine.producer"></span>
+                                        </div>
+                                        <div class="wine-detail" x-show="wine.vintage">
+                                            <span class="wine-label">Vintage:</span>
+                                            <span x-text="wine.vintage"></span>
+                                        </div>
+                                        <div class="wine-detail" x-show="wine.region">
+                                            <span class="wine-label">Region:</span>
+                                            <span x-text="wine.region"></span>
+                                        </div>
+                                        <div class="wine-detail" x-show="wine.varietal">
+                                            <span class="wine-label">Varietal:</span>
+                                            <span x-text="wine.varietal"></span>
+                                        </div>
+                                        <div class="wine-detail" x-show="wine.alcohol_content">
+                                            <span class="wine-label">Alcohol:</span>
+                                            <span x-text="wine.alcohol_content"></span>
+                                        </div>
+                                        <div class="wine-detail" x-show="wine.style">
+                                            <span class="wine-label">Style:</span>
+                                            <span x-text="wine.style"></span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Retail Price -->
+                                    <div class="wine-section" x-show="wine.retail_price">
+                                        <h4>Retail Price</h4>
+                                        <div class="wine-detail">
+                                            <span class="wine-label">Average U.S.:</span>
+                                            <span class="wine-price-value" x-text="wine.retail_price"></span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Ratings -->
+                                    <div class="wine-section" x-show="wine.ratings">
+                                        <h4>Ratings</h4>
+                                        <div class="wine-detail" x-show="wine.ratings && wine.ratings.vivino">
+                                            <span class="wine-label">Vivino:</span>
+                                            <span x-text="wine.ratings ? wine.ratings.vivino : ''"></span>
+                                        </div>
+                                        <div class="wine-detail" x-show="wine.ratings && wine.ratings.wine_spectator">
+                                            <span class="wine-label">Wine Spectator:</span>
+                                            <span x-text="wine.ratings ? wine.ratings.wine_spectator : ''"></span>
+                                        </div>
+                                        <div class="wine-detail" x-show="wine.ratings && wine.ratings.other">
+                                            <span class="wine-label">Other:</span>
+                                            <span x-text="wine.ratings ? wine.ratings.other : ''"></span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Tasting Notes -->
+                                    <div class="wine-section" x-show="wine.tasting_notes">
+                                        <h4>Tasting Notes</h4>
+                                        <p class="wine-notes" x-text="wine.tasting_notes"></p>
+                                    </div>
+
+                                    <!-- Food Pairing -->
+                                    <div class="wine-section" x-show="wine.food_pairing">
+                                        <h4>Food Pairing</h4>
+                                        <p class="wine-notes" x-text="wine.food_pairing"></p>
+                                    </div>
+
+                                    <!-- Sources -->
+                                    <div class="wine-section" x-show="wine.sources && wine.sources.length > 0">
+                                        <h4>Sources</h4>
+                                        <div class="wine-sources">
+                                            <template x-for="source in (Array.isArray(wine.sources) ? wine.sources : [wine.sources])" :key="source">
+                                                <span class="wine-source" x-text="source"></span>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <div x-show="!processing && currentWineList && currentWineList.wines && currentWineList.wines.length > 0" class="wines-actions">
+                        <button @click="clearWineList()" class="clear-wines-button">
+                            Clear Wine Collection
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings View -->
+            <div x-show="currentView === 'settings'" class="settings-view">
+                <div class="settings-container">
+                    <div class="settings-info">
+                        <p>All data is stored locally in your browser. Nothing is sent to the cloud except API calls to AI providers.</p>
+                    </div>
+                    
+                    <!-- Provider Selection -->
+                    <div class="settings-group">
+                        <h3>AI Provider</h3>
+                        <div class="form-group">
+                            <label>Select Provider</label>
+                            <select x-model="selectedProvider" @change="saveSettings()">
+                                <option value="openai">OpenAI</option>
+                                <option value="google">Google Gemini</option>
+                                <option value="xai">xAI Grok</option>
+                                <option value="deepseek">DeepSeek</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- OpenAI Configuration -->
+                    <div class="settings-group" x-show="selectedProvider === 'openai'">
+                        <h3>OpenAI Configuration</h3>
+                        <form @submit.prevent="">
+                            <div class="form-group">
+                                <label>API Key</label>
+                                <input 
+                                    type="password" 
+                                    x-model="openaiKey" 
+                                    @change="saveSettings()"
+                                    placeholder="Enter your OpenAI API key"
+                                    autocomplete="off"
+                                />
+                            </div>
+                        </form>
+                        
+                        <div class="form-group">
+                            <label>Model</label>
+                            <select x-model="openaiModel" @change="saveSettings()">
+                                <option value="gpt-4o">GPT-4o (✓ Vision)</option>
+                                <option value="o1">O1</option>
+                                <option value="o3-mini">O3 Mini</option>
+                                <option value="o3">O3</option>
+                                <option value="o4-mini">O4 Mini</option>
+                                <option value="gpt-4.1">GPT-4.1</option>
+                                <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
+                                <option value="gpt-4.1-nano">GPT-4.1 Nano</option>
+                                <option value="gpt-4.5-preview">GPT-4.5 Preview</option>
+                            </select>
+                            <div class="temperature-description" style="margin-top: 0.5rem;">
+                                <small>✓ = Supports image analysis for wine uploads</small>
+                            </div>
+                        </div>
+                    </div>
+
+
+
+                    <!-- Google Configuration -->
+                    <div class="settings-group" x-show="selectedProvider === 'google'">
+                        <h3>Google Gemini Configuration</h3>
+                        <form @submit.prevent="">
+                            <div class="form-group">
+                                <label>API Key</label>
+                                <input 
+                                    type="password" 
+                                    x-model="googleKey" 
+                                    @change="saveSettings()"
+                                    placeholder="Enter your Google AI API key"
+                                    autocomplete="off"
+                                />
+                            </div>
+                        </form>
+                        
+                        <div class="form-group">
+                            <label>Model</label>
+                            <select x-model="googleModel" @change="saveSettings()">
+                                <option value="gemini-2.5-flash-preview-05-20">Gemini 2.5 Flash Preview (✓ Vision)</option>
+                                <option value="gemini-2.5-pro-preview-05-06">Gemini 2.5 Pro Preview (✓ Vision)</option>
+                                <option value="gemini-2.0-flash">Gemini 2.0 Flash (✓ Vision)</option>
+                                <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite (✓ Vision)</option>
+                            </select>
+                            <div class="temperature-description" style="margin-top: 0.5rem;">
+                                <small>All Gemini models support image analysis</small>
+                            </div>
+                        </div>
+
+
+                    </div>
+
+                    <!-- xAI Configuration -->
+                    <div class="settings-group" x-show="selectedProvider === 'xai'">
+                        <h3>xAI Grok Configuration</h3>
+                        <form @submit.prevent="">
+                            <div class="form-group">
+                                <label>API Key</label>
+                                <input 
+                                    type="password" 
+                                    x-model="xaiKey" 
+                                    @change="saveSettings()"
+                                    placeholder="Enter your xAI API key"
+                                    autocomplete="off"
+                                />
+                            </div>
+                        </form>
+                        
+                        <div class="form-group">
+                            <label>Model</label>
+                            <select x-model="xaiModel" @change="saveSettings()">
+                                <option value="grok-3">Grok 3 (✓ Vision)</option>
+                                <option value="grok-3-mini">Grok 3 Mini (✓ Vision)</option>
+                                <option value="grok-3-fast">Grok 3 Fast (✓ Vision)</option>
+                                <option value="grok-3-mini-fast">Grok 3 Mini Fast (✓ Vision)</option>
+                            </select>
+                            <div class="temperature-description" style="margin-top: 0.5rem;">
+                                <small>Grok models use specialized vision API</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DeepSeek Configuration -->
+                    <div class="settings-group" x-show="selectedProvider === 'deepseek'">
+                        <h3>DeepSeek Configuration</h3>
+                        <form @submit.prevent="">
+                            <div class="form-group">
+                                <label>API Key</label>
+                                <input 
+                                    type="password" 
+                                    x-model="deepseekKey" 
+                                    @change="saveSettings()"
+                                    placeholder="Enter your DeepSeek API key"
+                                    autocomplete="off"
+                                />
+                            </div>
+                        </form>
+                        
+                        <div class="form-group">
+                            <label>Model</label>
+                            <select x-model="deepseekModel" @change="saveSettings()">
+                                <option value="deepseek-chat">DeepSeek Chat (? Vision)</option>
+                                <option value="deepseek-reasoner">DeepSeek Reasoner (? Vision)</option>
+                                <option value="deepseek-coder">DeepSeek Coder (? Vision)</option>
+                            </select>
+                            <div class="temperature-description" style="margin-top: 0.5rem;">
+                                <small>? = Vision support may be limited or experimental</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Temperature Control -->
+                    <div class="settings-group" x-show="supportsTemperature">
+                        <h3>Temperature Control</h3>
+                        <div class="form-group">
+                            <label>Temperature: <span x-text="temperature.toFixed(1)"></span></label>
+                            <input 
+                                type="range" 
+                                x-model="temperature" 
+                                min="0" 
+                                max="2" 
+                                step="0.1"
+                                @input="saveSettings()"
+                                class="temperature-slider"
+                            />
+                            <div class="temperature-description">
+                                <small>Lower values (0.0-0.5) make outputs more focused and deterministic. Higher values (0.5-2.0) make outputs more creative and varied.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Temperature Notice for Reasoning Models -->
+                    <div class="settings-group" x-show="!supportsTemperature">
+                        <h3>Temperature Control</h3>
+                        <div class="form-group">
+                            <div class="temperature-notice">
+                                <p>⚠️ The selected model (<span x-text="selectedModel"></span>) is a reasoning model that doesn't support temperature control. Temperature is fixed at 1.0.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Debug View -->
+            <div x-show="currentView === 'debug'" class="debug-view">
+                <div class="debug-container">
+                    <div class="debug-controls">
+                        <label class="debug-toggle">
+                            <input type="checkbox" x-model="debugEnabled" @change="saveSettings()">
+                            Enable Debug Logging
+                        </label>
+                        <label class="debug-toggle">
+                            <input type="checkbox" x-model="debugPrettyMode" @change="saveSettings()">
+                            Pretty JSON Mode
+                        </label>
+                    </div>
+                    
+                    <div class="debug-log">
+                        <template x-for="(entry, index) in debugLog" :key="index">
+                            <div class="debug-entry" :class="entry.type">
+                                <div class="debug-header">
+                                    <span class="debug-timestamp" x-text="entry.timestamp"></span>
+                                    <span class="debug-type" x-text="entry.type.toUpperCase()"></span>
+                                    <span class="debug-provider" x-text="entry.provider"></span>
+                                    <span class="debug-model" x-text="entry.model"></span>
+                                    <span class="debug-request-id" x-show="entry.requestId" x-text="'ID: ' + entry.requestId"></span>
+                                </div>
+                                <div class="debug-content">
+                                    <!-- Request Information -->
+                                    <div class="debug-section" x-show="entry.url">
+                                        <div class="debug-section-header">
+                                            <h4>Request Details</h4>
+                                        </div>
+                                        <div class="debug-details">
+                                            <div><strong>URL:</strong> <span x-text="entry.url"></span></div>
+                                            <div x-show="entry.method"><strong>Method:</strong> <span x-text="entry.method"></span></div>
+                                            <div x-show="entry.requestBodySize"><strong>Request Size:</strong> <span x-text="entry.requestBodySize + ' bytes'"></span></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Request Headers -->
+                                    <div class="debug-section" x-show="entry.requestHeaders">
+                                        <div class="debug-section-header">
+                                            <h4>Request Headers</h4>
+                                            <button @click="copyToClipboard(JSON.stringify(entry.requestHeaders, null, 2))" class="copy-json-btn" title="Copy Headers to clipboard">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        <pre class="debug-json" x-html="formatDebugJSON(entry.requestHeaders)"></pre>
+                                    </div>
+                                    
+                                    <!-- Request Body -->
+                                    <div class="debug-section" x-show="entry.requestBody">
+                                        <div class="debug-section-header">
+                                            <h4>Request Body</h4>
+                                            <button @click="copyToClipboard(JSON.stringify(entry.requestBody, null, 2))" class="copy-json-btn" title="Copy Request Body to clipboard">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        <pre class="debug-json" x-html="formatDebugJSON(entry.requestBody)"></pre>
+                                    </div>
+                                    
+                                    <!-- Response Information -->
+                                    <div class="debug-section" x-show="entry.status">
+                                        <div class="debug-section-header">
+                                            <h4>Response Details</h4>
+                                        </div>
+                                        <div class="debug-details">
+                                            <div><strong>Status:</strong> <span x-text="entry.status + ' ' + (entry.statusText || '')"></span></div>
+                                            <div x-show="entry.responseBodySize"><strong>Response Size:</strong> <span x-text="entry.responseBodySize + ' bytes'"></span></div>
+                                            <div x-show="entry.duration"><strong>Duration:</strong> <span x-text="entry.duration + 's'"></span></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Response Headers -->
+                                    <div class="debug-section" x-show="entry.responseHeaders">
+                                        <div class="debug-section-header">
+                                            <h4>Response Headers</h4>
+                                            <button @click="copyToClipboard(JSON.stringify(entry.responseHeaders, null, 2))" class="copy-json-btn" title="Copy Response Headers to clipboard">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        <pre class="debug-json" x-html="formatDebugJSON(entry.responseHeaders)"></pre>
+                                    </div>
+                                    
+                                    <!-- Response Body -->
+                                    <div class="debug-section" x-show="entry.responseBody">
+                                        <div class="debug-section-header">
+                                            <h4>Response Body</h4>
+                                            <button @click="copyToClipboard(JSON.stringify(entry.responseBody, null, 2))" class="copy-json-btn" title="Copy Response Body to clipboard">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        <pre class="debug-json" x-html="formatDebugJSON(entry.responseBody)"></pre>
+                                    </div>
+                                    
+                                    <!-- Parsed Response -->
+                                    <div class="debug-section" x-show="entry.parsedResponse">
+                                        <div class="debug-section-header">
+                                            <h4>Parsed Response</h4>
+                                            <button @click="copyToClipboard(JSON.stringify(entry.parsedResponse, null, 2))" class="copy-json-btn" title="Copy Parsed Response to clipboard">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        <pre class="debug-json" x-html="formatDebugJSON(entry.parsedResponse)"></pre>
+                                    </div>
+                                    
+                                    <!-- Error Information -->
+                                    <div class="debug-section" x-show="entry.error">
+                                        <div class="debug-section-header">
+                                            <h4>Error</h4>
+                                        </div>
+                                        <pre class="debug-error" x-text="entry.error"></pre>
+                                        <div x-show="entry.stack" class="debug-stack">
+                                            <h5>Stack Trace</h5>
+                                            <pre x-text="entry.stack"></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                        <div x-show="debugLog.length === 0" class="debug-empty">
+                            No debug entries yet. Enable debug logging and make some API calls to see them here.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html> 
