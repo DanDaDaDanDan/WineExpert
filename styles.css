@@ -1,14 +1,19 @@
 :root {
-    --primary-color: #4a4a4a;
-    --secondary-color: #6b6b6b;
-    --background-color: #f7f7f8;
-    --surface-color: #ffffff;
-    --text-primary: #1e1e1e;
-    --text-secondary: #6b6b6b;
-    --border-color: #e0e0e0;
-    --shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-    --message-player: #4a4a4a;
-    --message-system: #f0f2f4;
+    /* Dark wine cellar theme */
+    --primary-color: #9e4a54;  /* Soft wine red */
+    --secondary-color: #d4a574; /* Warm gold/cork */
+    --accent-color: #7a8e59;    /* Muted olive green */
+    --background-color: #1a1614; /* Very dark brown */
+    --surface-color: rgba(35, 30, 26, 0.85); /* Semi-transparent dark brown */
+    --surface-dark: rgba(28, 24, 20, 0.95); /* Darker surface */
+    --text-primary: #e8ddd5;    /* Warm off-white */
+    --text-secondary: #b8a899;  /* Muted beige */
+    --border-color: rgba(139, 119, 101, 0.3); /* Subtle stone border */
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    --message-player: #7a8e59;  /* Olive green for user */
+    --message-system: rgba(35, 30, 26, 0.9); /* Dark surface */
+    --glass-bg: rgba(35, 30, 26, 0.6); /* Glass morphism background */
+    --glass-border: rgba(255, 255, 255, 0.1); /* Glass border */
 }
 
 * {
@@ -28,6 +33,10 @@ body {
     font-size: 15px;
     line-height: 1.5;
     background-color: var(--background-color);
+    background-image: url('misc/background.jpg');
+    background-repeat: repeat;
+    background-size: auto;
+    background-attachment: fixed;
     color: var(--text-primary);
 }
 
@@ -41,6 +50,8 @@ body {
 /* Navigation */
 .nav-bar {
     background-color: var(--surface-color);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-color);
     box-shadow: var(--shadow);
     z-index: 100;
 }
@@ -57,7 +68,7 @@ body {
 .app-title {
     font-size: 1.35rem;
     font-weight: 600;
-    color: #1e1e1e;
+    color: var(--primary-color);
 }
 
 .nav-buttons {
@@ -82,7 +93,8 @@ body {
 
 .nav-buttons button.active {
     color: var(--primary-color);
-    background-color: rgba(74, 74, 74, 0.1);
+    background-color: rgba(114, 47, 55, 0.1);
+    font-weight: 500;
 }
 
 /* Main Content */
@@ -111,7 +123,7 @@ body {
     height: 100%;
     display: flex;
     flex-direction: column;
-    gap: 0;
+    gap: 1.5rem;
 }
 
 /* Chat Header */
@@ -133,7 +145,9 @@ body {
     flex-direction: column;
     gap: 1rem;
     padding: 1.5rem;
-    background-color: var(--surface-color);
+    background-color: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
     border-radius: 12px;
     box-shadow: var(--shadow);
     overflow-y: auto;
@@ -145,11 +159,14 @@ body {
 .chat-input {
     display: flex;
     gap: 0.75rem;
-    padding: 1.5rem;
-    background-color: var(--surface-color);
-    border-radius: 12px;
+    padding: 1rem;
+    background-color: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
     box-shadow: var(--shadow);
     flex-shrink: 0;
+    align-items: flex-end;
 }
 
 /* Chat Panel */
@@ -521,6 +538,8 @@ body {
     border-radius: 12px;
     font-size: 0.95rem;
     font-family: inherit;
+    background-color: var(--surface-dark);
+    color: var(--text-primary);
     outline: none;
     transition: border-color 0.2s;
     resize: none;
@@ -532,6 +551,7 @@ body {
 
 .chat-input textarea:focus {
     border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(158, 74, 84, 0.2);
 }
 
 .chat-input .send-button {
@@ -566,8 +586,8 @@ body {
 .chat-input .upload-button {
     width: 44px;
     height: 44px;
-    background-color: var(--background-color);
-    color: var(--primary-color);
+    background-color: var(--surface-dark);
+    color: var(--secondary-color);
     border: 1px solid var(--border-color);
     border-radius: 50%;
     cursor: pointer;
@@ -591,33 +611,6 @@ body {
     cursor: not-allowed;
 }
 
-.chat-input .clear-context-button {
-    width: 44px;
-    height: 44px;
-    background-color: var(--background-color);
-    color: #dc3545;
-    border: 1px solid var(--border-color);
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 1.1rem;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.chat-input .clear-context-button:hover:not(:disabled) {
-    background-color: #dc3545;
-    color: white;
-    border-color: #dc3545;
-    transform: scale(1.05);
-}
-
-.chat-input .clear-context-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
 
 
 /* Info Panel */
@@ -1690,6 +1683,82 @@ body {
 .debug-details span {
     color: var(--text-secondary);
     word-break: break-all;
+}
+
+/* Settings Info (Privacy Notice) */
+.settings-info {
+    background: linear-gradient(135deg, var(--glass-bg), rgba(158, 74, 84, 0.1));
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+}
+
+.settings-info::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--primary-color), var(--secondary-color), var(--accent-color));
+}
+
+.settings-info p {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    text-align: center;
+    font-weight: 500;
+}
+
+/* Update settings groups for dark theme */
+.settings-group {
+    background-color: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: var(--shadow);
+    margin-bottom: 2rem;
+}
+
+/* Update form elements for dark theme */
+.form-group input,
+.form-group textarea,
+.form-group select {
+    background-color: var(--surface-dark);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(158, 74, 84, 0.2);
+}
+
+/* Update wines view for dark theme */
+.wines-container {
+    background-color: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: var(--shadow);
+}
+
+.wine-card {
+    background-color: var(--surface-dark);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
 }
 
 .debug-stack {

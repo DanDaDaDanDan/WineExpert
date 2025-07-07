@@ -28,15 +28,6 @@ export class ChatManager {
             type: 'user'
         });
         
-        // Add context indicator if wine list is available
-        if (this.app.currentWineList && this.app.currentWineList.wines && this.app.currentWineList.wines.length > 0) {
-            this.app.messages.push({
-                sender: 'System',
-                content: `Using context from ${this.app.currentWineList.wines.length} wines in the current list`,
-                type: 'system'
-            });
-        }
-        
         // Process with AI
         await this.processWithAI(userMessage, false);
     }
@@ -61,24 +52,34 @@ export class ChatManager {
             
             if (hasImage && imageDataUrl) {
                 // Use selected provider's Vision API for image analysis
-                const winePrompt = `FAST TEXT EXTRACTION: List each wine line from the image as simple JSON.
+                const winePrompt = `WINE MENU ANALYSIS: Analyze this wine menu/list image and extract detailed information for each wine.
 
-TASK: Extract wine names and prices exactly as shown. Don't research or analyze - just transcribe.
+TASK: For each wine shown, extract pricing and derive wine characteristics from visual context, wine names, and menu organization.
 
-RULES:
-- ONE wine per line
-- Capture glass price AND bottle price separately if visible
-- Use null if a price type isn't shown
-- Extract full wine text exactly as displayed
-- NO web search, NO additional info
+ANALYSIS GUIDELINES:
+- Extract wine names exactly as shown
+- Capture glass and bottle prices separately if visible
+- Determine wine type (red, white, rosé, sparkling, dessert) from:
+  * Menu section headings
+  * Wine names (e.g., "Chianti" = red, "Sauvignon Blanc" = white)
+  * Visual context clues
+  * Typical wine knowledge
+- Infer region/style from wine names when obvious
+- Extract vintage years from wine names
+- Note producer/winery names when visible
 
-RESPONSE FORMAT: Return valid JSON with this exact structure:
+RESPONSE FORMAT: Return valid JSON with this structure:
 {
   "wines": [
     {
       "name": "full wine text exactly as shown",
       "glass_price": "$XX or null",
-      "bottle_price": "$XX or null"
+      "bottle_price": "$XX or null", 
+      "wine_type": "red/white/rosé/sparkling/dessert",
+      "producer": "winery name if identifiable",
+      "vintage": "year if shown",
+      "region": "wine region if obvious from name",
+      "style": "wine style if identifiable (e.g., Chianti, Bordeaux blend)"
     }
   ]
 }`;
@@ -133,7 +134,7 @@ RESPONSE FORMAT: Return valid JSON with this exact structure:
                     this.app.messages.push({
                         sender: 'Wine Expert',
                         content: `Image analysis failed for ${this.app.selectedProvider}: ${visionError.message}. Please try uploading the image again or switch to OpenAI which has reliable vision support.`,
-                        type: 'system'
+                        type: 'npc-left'
                     });
                     return;
                 }
@@ -162,23 +163,28 @@ IMPORTANT: Always respond with valid JSON in this format:
                     console.log('Context summary:', contextSummary);
                     
                     systemPrompt += "\n\nCurrent wine list context (includes menu prices, retail prices, ratings, tasting notes, food pairings, producer, vintage, region, varietal, and sources):\n" + wineContext;
-                    userInput = `Based on the detailed wine information provided in the system context, ${userInput}`;
                 } else {
                     console.log('No wine context available for chat query');
                 }
                 
+                // Build conversation history from messages
+                const conversationHistory = this.buildConversationHistory();
+                console.log('=== Conversation History ===');
+                console.log('Message count:', conversationHistory.length);
+                console.log('History:', conversationHistory);
+                
                 switch(this.app.selectedProvider) {
                     case 'google':
-                        response = await this.app.aiModels.callGoogleAPI(systemPrompt, userInput || "Hello");
+                        response = await this.app.aiModels.callGoogleAPIWithHistory(systemPrompt, userInput || "Hello", conversationHistory);
                         break;
                     case 'xai':
-                        response = await this.app.aiModels.callXAIAPI(systemPrompt, userInput || "Hello");
+                        response = await this.app.aiModels.callXAIAPIWithHistory(systemPrompt, userInput || "Hello", conversationHistory);
                         break;
                     case 'deepseek':
-                        response = await this.app.aiModels.callDeepSeekAPI(systemPrompt, userInput || "Hello");
+                        response = await this.app.aiModels.callDeepSeekAPIWithHistory(systemPrompt, userInput || "Hello", conversationHistory);
                         break;
                     default: // OpenAI
-                        response = await this.app.aiModels.callOpenAIAPI(systemPrompt, userInput || "Hello");
+                        response = await this.app.aiModels.callOpenAIAPIWithHistory(systemPrompt, userInput || "Hello", conversationHistory);
                 }
             }
             
@@ -186,7 +192,7 @@ IMPORTANT: Always respond with valid JSON in this format:
             if (response.wines) {
                 if (hasImage) {
                     // For images: Store extracted data and do research
-                    const extractedWines = this.processExtractedPricing(response.wines);
+                    const extractedWines = this.processExtractedWineData(response.wines);
                     
                     this.app.messages.push({
                         sender: 'System',
@@ -210,7 +216,7 @@ IMPORTANT: Always respond with valid JSON in this format:
                     this.app.messages.push({
                         sender: 'Wine Expert',
                         content: response.message || 'I can help you with questions about wines, but I need an image to analyze wines.',
-                        type: 'system'
+                        type: 'npc-left'
                     });
                 }
             } else if (response.error) {
@@ -226,7 +232,7 @@ IMPORTANT: Always respond with valid JSON in this format:
                 this.app.messages.push({
                     sender: 'Wine Expert',
                     content: errorMessage,
-                    type: 'system'
+                    type: 'npc-left'
                 });
                 
                 // Also log to debug system
@@ -243,7 +249,7 @@ IMPORTANT: Always respond with valid JSON in this format:
                 this.app.messages.push({
                     sender: 'Wine Expert',
                     content: response.message || JSON.stringify(response, null, 2),
-                    type: 'system'
+                    type: 'npc-left'
                 });
             }
             
@@ -305,7 +311,7 @@ IMPORTANT: Always respond with valid JSON in this format:
             this.app.messages.push({
                 sender: 'Wine Expert',
                 content: response.error || 'No wines found in the image.',
-                type: 'system'
+                type: 'npc-left'
             });
             return;
         }
@@ -345,18 +351,18 @@ IMPORTANT: Always respond with valid JSON in this format:
         this.app.messages.push({
             sender: 'Wine Expert',
             content: formattedContent,
-            type: 'system'
+            type: 'npc-left'
         });
     }
 
-    // Helper function to process extracted pricing for research input
-    processExtractedPricing(wines) {
+    // Helper function to process extracted wine data for research input
+    processExtractedWineData(wines) {
         return wines.map(wine => {
             let processedWine = { ...wine };
             
-            // If both glass and bottle prices exist, prioritize bottle price
+            // Process pricing
             if (wine.bottle_price && wine.bottle_price !== null && wine.bottle_price !== 'null') {
-                processedWine.final_price = wine.bottle_price;
+                processedWine.menu_price = wine.bottle_price;
                 processedWine.price_source = 'bottle';
             }
             // If only glass price exists, convert to bottle price (multiply by 5)
@@ -364,19 +370,23 @@ IMPORTANT: Always respond with valid JSON in this format:
                 const glassPrice = this.extractNumericPrice(wine.glass_price);
                 if (glassPrice) {
                     const bottlePrice = glassPrice * 5;
-                    processedWine.final_price = `$${bottlePrice}`;
+                    processedWine.menu_price = `$${bottlePrice}`;
                     processedWine.price_source = 'glass_converted';
-                    processedWine.conversion_note = `Estimated from glass price (${wine.glass_price} × 5)`;
+                    processedWine.menu_price_note = `Estimated from glass price (${wine.glass_price} × 5)`;
                 } else {
-                    processedWine.final_price = wine.glass_price;
+                    processedWine.menu_price = wine.glass_price;
                     processedWine.price_source = 'glass';
                 }
             }
             // No price available
             else {
-                processedWine.final_price = null;
+                processedWine.menu_price = null;
                 processedWine.price_source = 'none';
             }
+            
+            // Clean up legacy pricing fields and use new structure
+            delete processedWine.final_price;
+            delete processedWine.conversion_note;
             
             return processedWine;
         });
@@ -392,8 +402,6 @@ IMPORTANT: Always respond with valid JSON in this format:
         }
         return null;
     }
-
-    // No longer needed - research results replace extracted data completely
 
     async processWinesInBatches(extractedWines) {
         // Split wines into batches of 10
@@ -463,13 +471,21 @@ IMPORTANT: Always respond with valid JSON in this format:
         
         const wineList = extractedWines.map((wine, index) => {
             let entry = `${index + 1}. ${wine.name}`;
-            if (wine.final_price) {
-                entry += ` (Menu: ${wine.final_price}`;
-                if (wine.conversion_note) {
-                    entry += ` - ${wine.conversion_note}`;
+            
+            // Add extracted information
+            if (wine.wine_type) entry += ` (${wine.wine_type})`;
+            if (wine.producer) entry += ` - ${wine.producer}`;
+            if (wine.vintage) entry += ` '${wine.vintage}`;
+            if (wine.region) entry += ` from ${wine.region}`;
+            
+            // Add pricing
+            if (wine.menu_price) {
+                entry += ` - Menu: ${wine.menu_price}`;
+                if (wine.menu_price_note) {
+                    entry += ` (${wine.menu_price_note})`;
                 }
-                entry += ')';
             }
+            
             return entry;
         }).join('\n');
         
@@ -542,14 +558,19 @@ RESPONSE FORMAT: Return valid JSON with this exact structure:
                     const extractedWine = extractedWines[index];
                     if (!extractedWine) return researchedWine;
                     
-                    // Ensure menu pricing is preserved from extracted data
+                    // Merge extracted data with research results
                     return {
                         ...researchedWine,
-                        // Guarantee menu pricing fields are set from extracted data
-                        menu_price: researchedWine.menu_price || extractedWine.final_price || null,
-                        menu_price_note: researchedWine.menu_price_note || extractedWine.conversion_note || null,
-                        // Ensure wine name matches extracted name if research name is missing/different
-                        name: researchedWine.name || extractedWine.name
+                        // Preserve extracted wine information
+                        name: researchedWine.name || extractedWine.name,
+                        menu_price: researchedWine.menu_price || extractedWine.menu_price || null,
+                        menu_price_note: researchedWine.menu_price_note || extractedWine.menu_price_note || null,
+                        wine_type: researchedWine.wine_type || extractedWine.wine_type || null,
+                        // Use research data if available, fallback to extracted data
+                        producer: researchedWine.producer || extractedWine.producer || null,
+                        vintage: researchedWine.vintage || extractedWine.vintage || null,
+                        region: researchedWine.region || extractedWine.region || null,
+                        style: researchedWine.style || extractedWine.style || null
                     };
                 });
                 
@@ -557,23 +578,24 @@ RESPONSE FORMAT: Return valid JSON with this exact structure:
             } else {
                 console.warn('Research result missing wines array, creating fallback');
                 console.warn('Result structure:', result);
-                // Create fallback result with basic extracted data
+                // Create fallback result with extracted data
                 result = {
                     wines: extractedWines.map(wine => ({
                         name: wine.name,
-                        menu_price: wine.final_price,
-                        menu_price_note: wine.conversion_note,
+                        menu_price: wine.menu_price,
+                        menu_price_note: wine.menu_price_note,
+                        wine_type: wine.wine_type,
+                        producer: wine.producer,
+                        vintage: wine.vintage,
+                        region: wine.region,
+                        style: wine.style,
                         retail_price: null,
                         ratings: null,
                         tasting_notes: null,
                         food_pairing: null,
                         sources: [],
-                        producer: null,
-                        vintage: null,
-                        region: null,
                         varietal: null,
-                        alcohol_content: null,
-                        style: null
+                        alcohol_content: null
                     }))
                 };
             }
@@ -581,26 +603,50 @@ RESPONSE FORMAT: Return valid JSON with this exact structure:
             return result;
         } catch (error) {
             console.error('Research batch failed:', error);
-            // Return fallback result with basic extracted data
+            // Return fallback result with extracted data
             return {
                 wines: extractedWines.map(wine => ({
                     name: wine.name,
-                    menu_price: wine.final_price,
-                    menu_price_note: wine.conversion_note,
+                    menu_price: wine.menu_price,
+                    menu_price_note: wine.menu_price_note,
+                    wine_type: wine.wine_type,
+                    producer: wine.producer,
+                    vintage: wine.vintage,
+                    region: wine.region,
+                    style: wine.style,
                     retail_price: null,
                     ratings: null,
                     tasting_notes: null,
                     food_pairing: null,
                     sources: [],
-                    producer: null,
-                    vintage: null,
-                    region: null,
                     varietal: null,
-                    alcohol_content: null,
-                    style: null
+                    alcohol_content: null
                 }))
             };
         }
+    }
+
+    // Build conversation history from messages
+    buildConversationHistory() {
+        const history = [];
+        
+        // Extract user and assistant messages, excluding system messages
+        this.app.messages.forEach(message => {
+            if (message.sender === 'User') {
+                history.push({
+                    role: 'user',
+                    content: message.content
+                });
+            } else if (message.sender === 'Wine Expert') {
+                history.push({
+                    role: 'assistant', 
+                    content: message.content
+                });
+            }
+            // Skip system messages as they're just UI notifications
+        });
+        
+        return history;
     }
 
     // Handle keyboard input in chat textarea

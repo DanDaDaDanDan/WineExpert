@@ -73,15 +73,6 @@
                         >
                             📷
                         </button>
-                        <button 
-                            x-show="currentWineList && currentWineList.wines && currentWineList.wines.length > 0"
-                            @click="currentWineList = null; extractedWineList = null; imageUploaded = false; messages.push({sender: 'System', content: 'Wine list context cleared. Upload a new wine image to start analyzing.', type: 'system'})" 
-                            class="clear-context-button"
-                            :disabled="processing"
-                            title="Clear wine list context"
-                        >
-                            🗑️
-                        </button>
                         <textarea 
                             x-model="currentInput" 
                             @keydown="handleInputKeydown($event)"
@@ -214,11 +205,6 @@
                         </template>
                     </div>
                     
-                    <div x-show="!processing && currentWineList && currentWineList.wines && currentWineList.wines.length > 0" class="wines-actions">
-                        <button @click="clearWineList()" class="clear-wines-button">
-                            Clear Wine Collection
-                        </button>
-                    </div>
                 </div>
             </div>
 

@@ -301,8 +301,12 @@ export class AIModels {
             }
         ];
         
+        // Use the selected model if it supports vision, otherwise use gpt-4o
+        const visionModels = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-4-vision-preview'];
+        const modelToUse = visionModels.includes(this.app.openaiModel) ? this.app.openaiModel : 'gpt-4o';
+        
         const body = {
-            model: 'gpt-4o', // Use GPT-4 Vision model
+            model: modelToUse,
             messages: messages,
             response_format: { type: "json_object" },
             max_tokens: 16384
@@ -381,9 +385,8 @@ export class AIModels {
             }
         };
         
-        // Use the same model but ensure it supports vision
-        const model = this.app.googleModel.includes('flash') ? 'gemini-2.0-flash-exp' : this.app.googleModel;
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.app.googleKey}`;
+        // All Gemini models support vision, use the selected model directly
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.app.googleModel}:generateContent?key=${this.app.googleKey}`;
         
         return this.makeAPICall(
             'google',
@@ -440,10 +443,12 @@ export class AIModels {
             }
         ];
         
+        // Use grok-vision-beta for vision, as it's the dedicated vision model
         const body = {
-            model: 'grok-vision-beta', // Use Grok Vision model
+            model: 'grok-vision-beta',
             messages: messages,
             response_format: { type: "json_object" },
+            temperature: this.app.effectiveTemperature,
             max_tokens: 131072
         };
         
@@ -507,6 +512,173 @@ export class AIModels {
             model: this.app.deepseekModel,
             messages: messages,
             response_format: { type: "json_object" },
+            temperature: this.app.effectiveTemperature,
+            max_tokens: 8192
+        };
+        
+        return this.makeAPICall(
+            'deepseek',
+            'https://api.deepseek.com/v1/chat/completions',
+            {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.app.deepseekKey}`
+            },
+            body,
+            (data) => this.safeJSONParse(data.choices[0].message.content)
+        );
+    }
+    
+    // Methods with conversation history support
+    async callOpenAIAPIWithHistory(systemPrompt, userPrompt, conversationHistory) {
+        // Build messages array with full conversation history
+        const messages = [
+            {
+                role: 'system',
+                content: systemPrompt
+            }
+        ];
+        
+        // Add conversation history
+        messages.push(...conversationHistory);
+        
+        // Add current user prompt
+        messages.push({
+            role: 'user',
+            content: userPrompt
+        });
+        
+        const body = {
+            model: this.app.openaiModel,
+            messages: messages,
+            response_format: { type: "json_object" },
+            max_tokens: 16384
+        };
+        
+        // Only add temperature for non-reasoning models
+        if (this.app.supportsTemperature) {
+            body.temperature = this.app.temperature;
+        }
+        
+        return this.makeAPICall(
+            'openai',
+            'https://api.openai.com/v1/chat/completions',
+            {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.app.openaiKey}`
+            },
+            body,
+            (data) => this.safeJSONParse(data.choices[0].message.content)
+        );
+    }
+    
+    async callGoogleAPIWithHistory(systemPrompt, userPrompt, conversationHistory) {
+        // For Google, we need to format the conversation differently
+        // Google uses a single user message with all context
+        let fullPrompt = systemPrompt + '\n\n';
+        
+        // Add conversation history as context
+        if (conversationHistory.length > 0) {
+            fullPrompt += 'Previous conversation:\n';
+            for (const msg of conversationHistory) {
+                if (msg.role === 'user') {
+                    fullPrompt += `User: ${msg.content}\n`;
+                } else if (msg.role === 'assistant') {
+                    fullPrompt += `Assistant: ${msg.content}\n`;
+                }
+            }
+            fullPrompt += '\n';
+        }
+        
+        fullPrompt += 'Current request: ' + userPrompt;
+        
+        const body = {
+            contents: [
+                {
+                    role: 'user',
+                    parts: [{ text: fullPrompt }]
+                }
+            ],
+            generationConfig: {
+                temperature: this.app.effectiveTemperature,
+                responseMimeType: "application/json",
+                maxOutputTokens: 8192
+            }
+        };
+        
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.app.googleModel}:generateContent?key=${this.app.googleKey}`;
+        
+        return this.makeAPICall(
+            'google',
+            url,
+            {
+                'Content-Type': 'application/json',
+            },
+            body,
+            (data) => this.safeJSONParse(data.candidates[0].content.parts[0].text)
+        );
+    }
+    
+    async callXAIAPIWithHistory(systemPrompt, userPrompt, conversationHistory) {
+        // Build messages array with full conversation history
+        const messages = [
+            {
+                role: 'system',
+                content: systemPrompt
+            }
+        ];
+        
+        // Add conversation history
+        messages.push(...conversationHistory);
+        
+        // Add current user prompt
+        messages.push({
+            role: 'user',
+            content: userPrompt
+        });
+        
+        const body = {
+            model: this.app.xaiModel,
+            messages: messages,
+            response_format: { type: "json_object" },
+            temperature: this.app.effectiveTemperature,
+            max_tokens: 131072
+        };
+        
+        return this.makeAPICall(
+            'xai',
+            'https://api.x.ai/v1/chat/completions',
+            {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.app.xaiKey}`
+            },
+            body,
+            (data) => this.safeJSONParse(data.choices[0].message.content)
+        );
+    }
+    
+    async callDeepSeekAPIWithHistory(systemPrompt, userPrompt, conversationHistory) {
+        // Build messages array with full conversation history
+        const messages = [
+            {
+                role: 'system',
+                content: systemPrompt
+            }
+        ];
+        
+        // Add conversation history
+        messages.push(...conversationHistory);
+        
+        // Add current user prompt
+        messages.push({
+            role: 'user',
+            content: userPrompt
+        });
+        
+        const body = {
+            model: this.app.deepseekModel,
+            messages: messages,
+            response_format: { type: "json_object" },
+            temperature: this.app.effectiveTemperature,
             max_tokens: 8192
         };
         
