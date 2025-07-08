@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
             <title>Wine Expert - AI-Powered Wine Analysis</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍷</text></svg>">
     <link rel="stylesheet" href="styles.css">
@@ -91,7 +91,7 @@
             <!-- Wines View -->
             <div x-show="currentView === 'wines'" class="wines-view">
                 <div class="wines-container">
-                    <div class="wines-header">
+                    <div class="wines-header tab-container">
                         <h2>Wine Collection</h2>
                         <p x-show="processing" class="wines-processing">
                             🔍 Analyzing wines and researching detailed information...
@@ -106,21 +106,26 @@
                     
                     <div x-show="!processing && currentWineList && currentWineList.wines && currentWineList.wines.length > 0" class="wines-grid">
                         <template x-for="(wine, index) in (currentWineList ? currentWineList.wines : [])" :key="index">
-                            <div class="wine-card">
+                            <div class="wine-card tab-container" :data-wine-type="wine.wine_type || 'unknown'">
                                 <div class="wine-header">
                                     <h3 x-text="wine.name"></h3>
                                 </div>
                                 <div class="wine-details">
-                                    <!-- Menu Price -->
-                                    <div class="wine-section" x-show="wine.menu_price">
-                                        <h4>Menu Price</h4>
-                                        <div class="wine-detail">
-                                            <span class="wine-label">Bottle:</span>
-                                            <span class="wine-price-value" x-text="wine.menu_price"></span>
-                                        </div>
-                                        <div class="wine-detail" x-show="wine.menu_price_note">
-                                            <span class="wine-label-small">Note:</span>
-                                            <span class="wine-note-small" x-text="wine.menu_price_note"></span>
+                                    <!-- Pricing Comparison -->
+                                    <div class="wine-pricing-section" x-show="wine.menu_price || wine.retail_price">
+                                        <div class="wine-pricing-grid">
+                                            <div class="wine-price-item" x-show="wine.menu_price">
+                                                <div class="wine-price-label">Menu Price</div>
+                                                <div class="wine-price-amount" x-text="wine.menu_price"></div>
+                                            </div>
+                                            <div class="wine-price-item" x-show="wine.retail_price">
+                                                <div class="wine-price-label">Retail Price</div>
+                                                <div class="wine-price-amount" x-text="wine.retail_price"></div>
+                                            </div>
+                                            <div class="wine-markup" x-show="wine.menu_price && wine.retail_price">
+                                                <div class="wine-markup-label">Markup</div>
+                                                <div class="wine-markup-value" x-text="calculateMarkup(wine.menu_price, wine.retail_price)"></div>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -150,15 +155,6 @@
                                         <div class="wine-detail" x-show="wine.style">
                                             <span class="wine-label">Style:</span>
                                             <span x-text="wine.style"></span>
-                                        </div>
-                                    </div>
-
-                                    <!-- Retail Price -->
-                                    <div class="wine-section" x-show="wine.retail_price">
-                                        <h4>Retail Price</h4>
-                                        <div class="wine-detail">
-                                            <span class="wine-label">Average U.S.:</span>
-                                            <span class="wine-price-value" x-text="wine.retail_price"></span>
                                         </div>
                                     </div>
 
@@ -211,12 +207,12 @@
             <!-- Settings View -->
             <div x-show="currentView === 'settings'" class="settings-view">
                 <div class="settings-container">
-                    <div class="settings-info">
+                    <div class="settings-info tab-container">
                         <p>All data is stored locally in your browser. Nothing is sent to the cloud except API calls to AI providers.</p>
                     </div>
                     
                     <!-- Provider Selection -->
-                    <div class="settings-group">
+                    <div class="settings-group tab-container">
                         <h3>AI Provider</h3>
                         <div class="form-group">
                             <label>Select Provider</label>
@@ -230,7 +226,7 @@
                     </div>
                     
                     <!-- OpenAI Configuration -->
-                    <div class="settings-group" x-show="selectedProvider === 'openai'">
+                    <div class="settings-group tab-container" x-show="selectedProvider === 'openai'">
                         <h3>OpenAI Configuration</h3>
                         <form @submit.prevent="">
                             <div class="form-group">
@@ -267,7 +263,7 @@
 
 
                     <!-- Google Configuration -->
-                    <div class="settings-group" x-show="selectedProvider === 'google'">
+                    <div class="settings-group tab-container" x-show="selectedProvider === 'google'">
                         <h3>Google Gemini Configuration</h3>
                         <form @submit.prevent="">
                             <div class="form-group">
@@ -299,7 +295,7 @@
                     </div>
 
                     <!-- xAI Configuration -->
-                    <div class="settings-group" x-show="selectedProvider === 'xai'">
+                    <div class="settings-group tab-container" x-show="selectedProvider === 'xai'">
                         <h3>xAI Grok Configuration</h3>
                         <form @submit.prevent="">
                             <div class="form-group">
@@ -329,7 +325,7 @@
                     </div>
 
                     <!-- DeepSeek Configuration -->
-                    <div class="settings-group" x-show="selectedProvider === 'deepseek'">
+                    <div class="settings-group tab-container" x-show="selectedProvider === 'deepseek'">
                         <h3>DeepSeek Configuration</h3>
                         <form @submit.prevent="">
                             <div class="form-group">
@@ -361,7 +357,7 @@
                     </div>
 
                     <!-- Temperature Control -->
-                    <div class="settings-group" x-show="supportsTemperature">
+                    <div class="settings-group tab-container" x-show="supportsTemperature">
                         <h3>Temperature Control</h3>
                         <div class="form-group">
                             <label>Temperature: <span x-text="temperature.toFixed(1)"></span></label>
@@ -381,7 +377,7 @@
                     </div>
 
                     <!-- Temperature Notice for Reasoning Models -->
-                    <div class="settings-group" x-show="!supportsTemperature">
+                    <div class="settings-group tab-container" x-show="!supportsTemperature">
                         <h3>Temperature Control</h3>
                         <div class="form-group">
                             <div class="temperature-notice">
@@ -395,7 +391,7 @@
             <!-- Debug View -->
             <div x-show="currentView === 'debug'" class="debug-view">
                 <div class="debug-container">
-                    <div class="debug-controls">
+                    <div class="debug-controls tab-container">
                         <label class="debug-toggle">
                             <input type="checkbox" x-model="debugEnabled" @change="saveSettings()">
                             Enable Debug Logging
@@ -408,7 +404,7 @@
                     
                     <div class="debug-log">
                         <template x-for="(entry, index) in debugLog" :key="index">
-                            <div class="debug-entry" :class="entry.type">
+                            <div class="debug-entry tab-container" :class="entry.type">
                                 <div class="debug-header">
                                     <span class="debug-timestamp" x-text="entry.timestamp"></span>
                                     <span class="debug-type" x-text="entry.type.toUpperCase()"></span>

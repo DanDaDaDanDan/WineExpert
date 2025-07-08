@@ -185,6 +185,26 @@ window.wineExpertApp = function() {
             });
             
             
+            // Wine pricing utilities
+            this.calculateMarkup = (menuPrice, retailPrice) => {
+                if (!menuPrice || !retailPrice) return 'N/A';
+                
+                // Extract numeric values from price strings
+                const extractPrice = (priceStr) => {
+                    if (typeof priceStr !== 'string') return null;
+                    const match = priceStr.match(/[\d,]+\.?\d*/);
+                    return match ? parseFloat(match[0].replace(/,/g, '')) : null;
+                };
+                
+                const menu = extractPrice(menuPrice);
+                const retail = extractPrice(retailPrice);
+                
+                if (!menu || !retail || retail === 0) return 'N/A';
+                
+                const markup = ((menu - retail) / retail) * 100;
+                return markup > 0 ? `+${markup.toFixed(0)}%` : `${markup.toFixed(0)}%`;
+            };
+            
             // Utility methods
             this.copyToClipboard = async (text) => {
                 try {

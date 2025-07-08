@@ -1,19 +1,26 @@
 :root {
-    /* Dark wine cellar theme */
+    /* Dark wine cellar theme with improved contrast */
     --primary-color: #9e4a54;  /* Soft wine red */
     --secondary-color: #d4a574; /* Warm gold/cork */
     --accent-color: #7a8e59;    /* Muted olive green */
     --background-color: #1a1614; /* Very dark brown */
     --surface-color: rgba(35, 30, 26, 0.85); /* Semi-transparent dark brown */
     --surface-dark: rgba(28, 24, 20, 0.95); /* Darker surface */
-    --text-primary: #e8ddd5;    /* Warm off-white */
-    --text-secondary: #b8a899;  /* Muted beige */
-    --border-color: rgba(139, 119, 101, 0.3); /* Subtle stone border */
+    --text-primary: #f5f0eb;    /* Brighter off-white for better contrast */
+    --text-secondary: #d4c5b9;  /* Lighter beige for improved readability */
+    --border-color: rgba(139, 119, 101, 0.4); /* Slightly stronger border */
     --shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     --message-player: #7a8e59;  /* Olive green for user */
     --message-system: rgba(35, 30, 26, 0.9); /* Dark surface */
     --glass-bg: rgba(35, 30, 26, 0.6); /* Glass morphism background */
     --glass-border: rgba(255, 255, 255, 0.1); /* Glass border */
+    
+    /* Wine type colors */
+    --wine-red: #8b2635;        /* Deep burgundy for red wines */
+    --wine-white: #f4e4c1;      /* Pale gold for white wines */
+    --wine-rose: #e4717a;       /* Soft pink for rosé */
+    --wine-sparkling: #ffd700;  /* Champagne gold for sparkling */
+    --wine-dessert: #8b4513;    /* Amber for dessert wines */
 }
 
 * {
@@ -50,7 +57,6 @@ body {
 /* Navigation */
 .nav-bar {
     background-color: var(--surface-color);
-    backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--border-color);
     box-shadow: var(--shadow);
     z-index: 100;
@@ -100,9 +106,19 @@ body {
 /* Main Content */
 .main-content {
     flex: 1;
-    overflow: auto;
+    overflow: hidden;
     position: relative;
     min-height: 0;
+}
+
+/* Common container styling for consistent appearance across all tabs */
+.tab-container {
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: var(--shadow);
+    margin-bottom: 2rem;
 }
 
 /* Chat View */
@@ -114,6 +130,7 @@ body {
     align-items: stretch;
     padding: 2rem;
     overflow: hidden;
+    position: relative;
 }
 
 /* Chat Panel Full Width */
@@ -123,7 +140,7 @@ body {
     height: 100%;
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    position: relative;
 }
 
 /* Chat Header */
@@ -140,33 +157,40 @@ body {
 
 /* Chat Messages Container */
 .chat-messages {
-    flex: 1;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 120px; /* Leave space for input at bottom */
     display: flex;
     flex-direction: column;
     gap: 1rem;
     padding: 1.5rem;
-    background-color: var(--glass-bg);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--glass-border);
+    padding-bottom: 2rem; /* Extra padding at bottom */
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     box-shadow: var(--shadow);
     overflow-y: auto;
     scroll-behavior: smooth;
-    min-height: 0;
+    overscroll-behavior: contain; /* Prevent over-scrolling */
 }
 
 /* Chat Input */
 .chat-input {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
     display: flex;
     gap: 0.75rem;
     padding: 1rem;
-    background-color: var(--glass-bg);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--glass-border);
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
     border-radius: 16px;
     box-shadow: var(--shadow);
-    flex-shrink: 0;
     align-items: flex-end;
+    z-index: 10; /* Ensure it stays on top */
 }
 
 /* Chat Panel */
@@ -652,7 +676,7 @@ body {
 
 .person-item {
     padding: 1rem;
-    background-color: var(--background-color);
+    background-color: var(--surface-color);
     border-radius: 8px;
 }
 
@@ -677,6 +701,8 @@ body {
     width: 100%;
     display: flex;
     justify-content: center;
+    overflow-y: auto;
+    height: 100%;
 }
 
 .settings-container {
@@ -690,11 +716,8 @@ body {
 }
 
 .settings-group {
-    background-color: var(--surface-color);
-    border-radius: 12px;
-    padding: 2rem;
-    box-shadow: var(--shadow);
-    margin-bottom: 2rem;
+    /* Ensure consistent background - inherits other styles from .tab-container in HTML */
+    background-color: var(--surface-color) !important;
 }
 
 .settings-group h3 {
@@ -722,6 +745,8 @@ body {
     border: 1px solid var(--border-color);
     border-radius: 8px;
     font-size: 0.95rem;
+    background-color: var(--surface-color);
+    color: var(--text-primary);
     transition: border-color 0.2s;
 }
 
@@ -738,11 +763,11 @@ body {
 }
 
 .settings-info {
-    background-color: rgba(16, 163, 127, 0.1);
-    border-radius: 8px;
-    padding: 1rem;
+    /* Ensure consistent background - inherits other styles from .tab-container in HTML */
+    background-color: var(--surface-color) !important;
+    border-radius: 8px; /* Less rounded for info notices */
+    padding: 1rem; /* Tighter padding for info */
     color: var(--primary-color);
-    margin-bottom: 1.5rem;
 }
 
 /* Persona creator within settings */
@@ -759,9 +784,9 @@ body {
     padding: 2rem;
 }
 
-/* Persona creator in other contexts (like settings) should have gray background */
+/* Persona creator in other contexts (like settings) should have consistent background */
 .settings-view .persona-creator {
-    background-color: var(--background-color);
+    background-color: var(--surface-color);
 }
 
 .persona-creator h4 {
@@ -912,7 +937,7 @@ body {
 }
 
 .persona-card {
-    background-color: var(--background-color);
+    background-color: var(--surface-color);
     border-radius: 8px;
     padding: 1rem;
     border: 1px solid var(--border-color);
@@ -1045,12 +1070,10 @@ body {
 @media (max-width: 768px) {
     .chat-view {
         padding: 1rem;
-        gap: 1rem;
         overflow: hidden;
     }
     
     .chat-panel-full {
-        gap: 0;
         height: 100%;
     }
     
@@ -1060,11 +1083,17 @@ body {
     
     .chat-messages {
         padding: 1rem;
-        min-height: 0;
+        bottom: 100px; /* Smaller input height on mobile */
+        padding-bottom: 1.5rem;
     }
     
     .chat-input {
-        padding: 1rem;
+        padding: 0.75rem;
+        border-radius: 12px; /* Less rounded on mobile for better space usage */
+    }
+    
+    .chat-input textarea {
+        font-size: 16px; /* Prevent zoom on iOS */
     }
     
     .nav-content {
@@ -1083,6 +1112,31 @@ body {
     .dropdown-menu {
         max-width: 90vw;
         right: -1rem;
+    }
+    
+    /* Ensure no body scrolling on mobile */
+    body {
+        overscroll-behavior: none;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* iOS Safari specific fixes */
+    .chat-view {
+        padding-bottom: env(safe-area-inset-bottom, 1rem);
+    }
+    
+    /* Prevent viewport changes on keyboard */
+    .chat-input {
+        position: fixed;
+        bottom: env(safe-area-inset-bottom, 0);
+        left: 1rem;
+        right: 1rem;
+        max-width: calc(800px - 2rem);
+        margin: 0 auto;
+    }
+    
+    .chat-messages {
+        bottom: calc(100px + env(safe-area-inset-bottom, 0));
     }
 }
 
@@ -1185,6 +1239,8 @@ body {
     width: 100%;
     display: flex;
     justify-content: center;
+    overflow-y: auto;
+    height: 100%;
 }
 
 .wines-container {
@@ -1193,14 +1249,16 @@ body {
 }
 
 .wines-header {
+    /* Extends .tab-container styling */
     text-align: center;
-    margin-bottom: 2rem;
+    border-radius: 20px; /* Slightly more rounded for header */
 }
 
 .wines-header h2 {
     font-size: 1.75rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
     color: var(--text-primary);
+    font-weight: 600;
 }
 
 .wines-empty {
@@ -1233,16 +1291,38 @@ body {
 }
 
 .wine-card {
-    background-color: var(--surface-color);
-    border-radius: 12px;
-    padding: 1.5rem;
-    box-shadow: var(--shadow);
-    transition: transform 0.2s, box-shadow 0.2s;
+    /* Extends .tab-container styling */
+    padding: 1.5rem; /* Slightly tighter padding for cards */
+    transition: all 0.2s;
+    position: relative;
+    margin-bottom: 0; /* Reset margin for grid layout */
 }
 
 .wine-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: var(--primary-color);
+}
+
+/* Wine type indicators */
+.wine-card[data-wine-type="red"] {
+    border-left: 4px solid var(--wine-red);
+}
+
+.wine-card[data-wine-type="white"] {
+    border-left: 4px solid var(--wine-white);
+}
+
+.wine-card[data-wine-type="rosé"],
+.wine-card[data-wine-type="rose"] {
+    border-left: 4px solid var(--wine-rose);
+}
+
+.wine-card[data-wine-type="sparkling"] {
+    border-left: 4px solid var(--wine-sparkling);
+}
+
+.wine-card[data-wine-type="dessert"] {
+    border-left: 4px solid var(--wine-dessert);
 }
 
 .wine-header {
@@ -1299,7 +1379,59 @@ body {
 .wine-price-value {
     font-size: 1.1rem;
     font-weight: 600;
-    color: var(--primary-color);
+    color: var(--text-primary);
+}
+
+/* Pricing comparison section */
+.wine-pricing-section {
+    background-color: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+    border: 1px solid var(--border-color);
+}
+
+.wine-pricing-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 1rem;
+    align-items: center;
+}
+
+.wine-price-item {
+    text-align: center;
+}
+
+.wine-price-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.wine-price-amount {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.wine-markup {
+    text-align: center;
+    padding: 0.5rem 1rem;
+    background-color: rgba(212, 165, 116, 0.1);
+    border: 1px solid var(--secondary-color);
+    border-radius: 6px;
+}
+
+.wine-markup-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.wine-markup-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--secondary-color);
 }
 
 .wine-original-price {
@@ -1380,6 +1512,8 @@ body {
 .debug-view {
     padding: 2rem;
     width: 100%;
+    overflow-y: auto;
+    height: 100%;
 }
 
 .debug-container {
@@ -1392,14 +1526,12 @@ body {
 }
 
 .debug-controls {
+    /* Extends .tab-container styling */
     display: flex;
     gap: 1rem;
     align-items: center;
-    margin-bottom: 2rem;
-    padding: 1rem;
-    background-color: var(--surface-color);
-    border-radius: 8px;
-    box-shadow: var(--shadow);
+    padding: 1rem; /* Tighter padding for controls */
+    border-radius: 8px; /* Less rounded for controls */
 }
 
 .debug-toggle {
@@ -1422,9 +1554,10 @@ body {
 }
 
 .debug-entry {
-    background-color: var(--surface-color);
-    border-radius: 8px;
-    box-shadow: var(--shadow);
+    /* Extends .tab-container styling */
+    border-radius: 8px; /* Less rounded for entries */
+    padding: 0; /* Reset padding for custom inner layout */
+    margin-bottom: 1rem; /* Tighter spacing between entries */
     overflow: hidden;
 }
 
@@ -1445,7 +1578,7 @@ body {
     gap: 1rem;
     align-items: center;
     padding: 1rem;
-    background-color: var(--background-color);
+    background-color: var(--surface-color);
     border-bottom: 1px solid var(--border-color);
 }
 
@@ -1528,7 +1661,7 @@ body {
 
 .copy-json-btn {
     padding: 0.25rem 0.5rem;
-    background-color: var(--background-color);
+    background-color: var(--surface-color);
     border: 1px solid var(--border-color);
     border-radius: 4px;
     cursor: pointer;
@@ -1553,7 +1686,7 @@ body {
 }
 
 .debug-json {
-    background-color: var(--background-color);
+    background-color: var(--surface-color);
     border: 1px solid var(--border-color);
     border-radius: 6px;
     padding: 1rem;
@@ -1687,9 +1820,8 @@ body {
 
 /* Settings Info (Privacy Notice) */
 .settings-info {
-    background: linear-gradient(135deg, var(--glass-bg), rgba(158, 74, 84, 0.1));
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--glass-border);
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
     border-radius: 16px;
     padding: 1.5rem;
     margin-bottom: 2rem;
@@ -1719,9 +1851,8 @@ body {
 
 /* Update settings groups for dark theme */
 .settings-group {
-    background-color: var(--glass-bg);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--glass-border);
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 2rem;
     box-shadow: var(--shadow);
@@ -1745,21 +1876,6 @@ body {
     box-shadow: 0 0 0 2px rgba(158, 74, 84, 0.2);
 }
 
-/* Update wines view for dark theme */
-.wines-container {
-    background-color: var(--glass-bg);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--glass-border);
-    border-radius: 16px;
-    padding: 2rem;
-    box-shadow: var(--shadow);
-}
-
-.wine-card {
-    background-color: var(--surface-dark);
-    backdrop-filter: blur(8px);
-    border: 1px solid var(--glass-border);
-}
 
 .debug-stack {
     margin-top: 1rem;

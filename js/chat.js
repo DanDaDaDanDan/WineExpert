@@ -322,11 +322,7 @@ IMPORTANT: Always respond with valid JSON in this format:
             formattedContent += `**${index + 1}. ${wine.name}**\n`;
             
             if (wine.menu_price) {
-                formattedContent += `   Menu: ${wine.menu_price}`;
-                if (wine.menu_price_note) {
-                    formattedContent += ` (${wine.menu_price_note})`;
-                }
-                formattedContent += `\n`;
+                formattedContent += `   Menu: ${wine.menu_price}\n`;
             }
             
             if (wine.retail_price) {
@@ -360,28 +356,25 @@ IMPORTANT: Always respond with valid JSON in this format:
         return wines.map(wine => {
             let processedWine = { ...wine };
             
-            // Process pricing
+            // Process pricing - normalize everything to bottle prices
             if (wine.bottle_price && wine.bottle_price !== null && wine.bottle_price !== 'null') {
+                // Use bottle price directly
                 processedWine.menu_price = wine.bottle_price;
-                processedWine.price_source = 'bottle';
             }
-            // If only glass price exists, convert to bottle price (multiply by 5)
             else if (wine.glass_price && wine.glass_price !== null && wine.glass_price !== 'null') {
+                // Convert glass price to bottle price (multiply by 5) - hide conversion details
                 const glassPrice = this.extractNumericPrice(wine.glass_price);
                 if (glassPrice) {
                     const bottlePrice = glassPrice * 5;
                     processedWine.menu_price = `$${bottlePrice}`;
-                    processedWine.price_source = 'glass_converted';
-                    processedWine.menu_price_note = `Estimated from glass price (${wine.glass_price} × 5)`;
                 } else {
+                    // If we can't parse glass price, use it as-is
                     processedWine.menu_price = wine.glass_price;
-                    processedWine.price_source = 'glass';
                 }
             }
-            // No price available
             else {
+                // No price available
                 processedWine.menu_price = null;
-                processedWine.price_source = 'none';
             }
             
             // Clean up legacy pricing fields and use new structure
@@ -481,9 +474,6 @@ IMPORTANT: Always respond with valid JSON in this format:
             // Add pricing
             if (wine.menu_price) {
                 entry += ` - Menu: ${wine.menu_price}`;
-                if (wine.menu_price_note) {
-                    entry += ` (${wine.menu_price_note})`;
-                }
             }
             
             return entry;
@@ -511,7 +501,6 @@ RESPONSE FORMAT: Return valid JSON with this exact structure:
     {
       "name": "exact wine name from list",
       "menu_price": "menu price from input if available",
-      "menu_price_note": "note about glass conversion if applicable", 
       "retail_price": "$XX average retail",
       "ratings": {
         "vivino": "X.X/5 (XXX reviews)",
@@ -564,7 +553,6 @@ RESPONSE FORMAT: Return valid JSON with this exact structure:
                         // Preserve extracted wine information
                         name: researchedWine.name || extractedWine.name,
                         menu_price: researchedWine.menu_price || extractedWine.menu_price || null,
-                        menu_price_note: researchedWine.menu_price_note || extractedWine.menu_price_note || null,
                         wine_type: researchedWine.wine_type || extractedWine.wine_type || null,
                         // Use research data if available, fallback to extracted data
                         producer: researchedWine.producer || extractedWine.producer || null,
@@ -583,7 +571,6 @@ RESPONSE FORMAT: Return valid JSON with this exact structure:
                     wines: extractedWines.map(wine => ({
                         name: wine.name,
                         menu_price: wine.menu_price,
-                        menu_price_note: wine.menu_price_note,
                         wine_type: wine.wine_type,
                         producer: wine.producer,
                         vintage: wine.vintage,
@@ -608,7 +595,6 @@ RESPONSE FORMAT: Return valid JSON with this exact structure:
                 wines: extractedWines.map(wine => ({
                     name: wine.name,
                     menu_price: wine.menu_price,
-                    menu_price_note: wine.menu_price_note,
                     wine_type: wine.wine_type,
                     producer: wine.producer,
                     vintage: wine.vintage,

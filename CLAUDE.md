@@ -15,12 +15,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Client-Side Only**: All processing happens in browser, API keys stored in localStorage
 
 ### Key Files
-- `index.html` - Main HTML with Alpine.js app
-- `js/app.js` - Alpine.js state manager and main orchestration
-- `js/models.js` - AI provider implementations (OpenAI, Anthropic, Google, xAI, DeepSeek)
-- `js/chat.js` - Chat messaging and conversation logic  
-- `js/settings.js` - Configuration and localStorage
+- `index.html` - Main HTML with Alpine.js app and wine type color coding
+- `js/app.js` - Alpine.js state manager with markup calculation utilities
+- `js/models.js` - AI provider implementations with updated vision model support
+- `js/chat.js` - Chat messaging with hidden price conversion and clean formatting
+- `js/settings.js` - Configuration and localStorage management  
 - `js/debug.js` - API monitoring and logging
+- `styles.css` - Dark wine cellar theme with consistent opacity and wine type colors
+- `misc/background.jpg` - Tiling wine cellar background image
 
 ### Module Dependencies
 ```
@@ -60,26 +62,59 @@ app.js (Alpine.js component)
   - Use `makeAPICall()` wrapper for consistent logging
 - **Vision Models**: Update prompt in `analyzeWineImage()` method
 - **UI Changes**: Edit `index.html` (Alpine.js directives) and `styles.css`
+  - Use `var(--background-color)` for consistent opacity across all tabs
+  - Wine type color coding via `data-wine-type` attributes
+  - Pricing grid layout for menu/retail/markup display
 
 ### Configuration
 - API keys stored in browser localStorage via settings panel
-- Temperature control with automatic reasoning model detection
-- Multi-provider support for both text generation and TTS
+- Temperature control with automatic reasoning model detection  
+- Multi-provider support for text generation and vision analysis
+- **No Clear Functionality**: Simplified UX - users reload page to reset state
+- **Unified Opacity**: All tabs use consistent dark backgrounds for professional appearance
 
 ## AI Provider Support
 
 ### Text Generation
-- OpenAI (GPT-4o, O1, O3 models)
-- Anthropic Claude (Opus 4, Sonnet 4, 3.5 variants)
-- Google Gemini (2.5 Flash, 2.5 Pro, 2.0 Flash variants)
-- xAI Grok (Grok 3 variants)
-- DeepSeek (Chat, Reasoner, Coder)
+- **OpenAI**: GPT-4o, O1, O3, O4-mini, GPT-4.1 series models
+- **Google Gemini**: 2.5 Flash/Pro Preview, 2.0 Flash variants  
+- **xAI Grok**: Grok 3, 3-mini, 3-fast variants
+- **DeepSeek**: Chat, Reasoner, Coder, VL2 vision models
+
+### Vision Model Support
+- **OpenAI**: GPT-4o, O1, O3, O4-mini, GPT-4.1 series (✓ Vision)
+- **Google**: All Gemini models support multimodal vision
+- **xAI**: All Grok models with specialized vision API
+- **DeepSeek**: VL2, VL2-small, Janus-Pro-7B (✓ Vision + Generation)
 
 ### Wine Analysis Features
 - **Image Recognition**: Upload photos of wine bottles, wine lists, or menus
 - **Detailed Information**: Get pricing, ratings, tasting notes, and food pairings
 - **Batch Processing**: Analyze multiple wines from a single image
 - **Follow-up Questions**: Wine list context maintained for conversational queries
+- **Wine Type Classification**: Automatic detection and color-coding for red, white, rosé, sparkling wines
+- **Pricing Analysis**: Menu vs retail price comparison with markup calculations
+- **Smart Price Conversion**: Glass prices silently converted to bottle estimates (×5) behind the scenes
+
+## User Interface Design
+
+### Dark Wine Cellar Theme
+- **Background**: Tiling wine cellar image (`misc/background.jpg`) with dark overlay
+- **Color Scheme**: Wine-inspired palette with burgundy, gold, and olive accents
+- **Opacity**: Consistent dark backgrounds (`var(--background-color)`) across all tabs for uniform appearance
+- **Typography**: High contrast text for improved readability
+- **Wine Type Color Coding**: Visual indicators using wine-specific colors:
+  - Red wines: Deep burgundy (`#8b2635`)
+  - White wines: Pale gold (`#f4e4c1`) 
+  - Rosé wines: Soft pink (`#e4717a`)
+  - Sparkling wines: Champagne gold (`#ffd700`)
+  - Dessert wines: Amber (`#8b4513`)
+
+### Layout and Navigation
+- **Tab-based Interface**: Chat, Wines, Settings, Debug views
+- **Bubble Design**: Rounded containers with wine cellar aesthetic
+- **No Clear Functionality**: Simplified workflow - users reload page to reset
+- **Responsive Design**: Optimized for desktop wine analysis workflows
 
 ## Code Patterns
 
@@ -97,10 +132,11 @@ app.js (Alpine.js component)
 
 ### Wine Data Processing
 - Structured JSON prompt for consistent extraction
-- Wine details: name, producer, vintage, region, grape varieties
-- Price data with glass-to-bottle conversion (glass × 5)
-- Rating aggregation from critics and crowd sources
-- Markdown formatting for display
+- Wine details: name, producer, vintage, region, grape varieties, wine type
+- **Hidden Price Conversion**: Glass prices silently converted to bottle estimates (×5) - conversion details not shown to users
+- **Pricing Display**: Menu price, retail price, and markup percentage shown together
+- Rating aggregation from critics and crowd sources (Vivino, Wine Spectator)
+- Markdown formatting for chat display, structured grid for wines tab
 
 ## Detailed Code Architecture
 
@@ -119,6 +155,9 @@ window.wineExpertApp = function() {
         
         // Provider settings with localStorage persistence
         selectedProvider: localStorage.getItem('selected_provider') || 'openai',
+        
+        // Wine pricing utilities
+        calculateMarkup: (menuPrice, retailPrice) => { /* Markup calculation logic */ },
         
         // Computed properties
         get apiKey() { /* Returns current provider's API key */ },
@@ -154,8 +193,9 @@ All functionality is split into manager classes with dependency injection:
   - `sendMessage()`: Handles text input and context passing
   - `processWithAI()`: Main orchestration for AI processing
   - `processWinesInBatches()`: Parallel batch processing for detailed research
-  - `processPricing()`: Glass-to-bottle price conversion logic
-  - `mergeWineData()`: Combines extraction and research data
+  - `processExtractedWineData()`: Clean price processing with hidden glass conversion
+  - `formatWineResponse()`: Chat display formatting without technical details
+  - `buildConversationHistory()`: Maintains chat context for follow-up questions
 
 #### DebugManager Class (`js/debug.js`)
 - **Purpose**: API monitoring and logging
@@ -171,57 +211,90 @@ The application uses a sophisticated two-stage processing system:
 
 #### Stage 1: Fast Extraction
 ```javascript
-// In processWithAI() when hasImage=true
-const winePrompt = `FAST TEXT EXTRACTION: List each wine line from the image as simple JSON.
-Don't parse or analyze - just transcribe what you see.
+// In processWithAI() when hasImage=true - Enhanced extraction with wine type detection
+const winePrompt = `WINE MENU ANALYSIS: Analyze this wine menu/list image and extract detailed information for each wine.
 
-For each wine line, return:
-{"name": "wine text", "glass_price": "$XX", "bottle_price": "$XX"}`;
+TASK: For each wine shown, extract pricing and derive wine characteristics from visual context, wine names, and menu organization.
+
+ANALYSIS GUIDELINES:
+- Extract wine names exactly as shown
+- Capture glass and bottle prices separately if visible
+- Determine wine type (red, white, rosé, sparkling, dessert) from:
+  * Menu section headings
+  * Wine names (e.g., "Chianti" = red, "Sauvignon Blanc" = white)
+  * Visual context clues
+  * Typical wine knowledge
+
+RESPONSE FORMAT: Return valid JSON with this structure:
+{
+  "wines": [
+    {
+      "name": "full wine text exactly as shown",
+      "glass_price": "$XX or null",
+      "bottle_price": "$XX or null", 
+      "wine_type": "red/white/rosé/sparkling/dessert",
+      "producer": "winery name if identifiable",
+      "vintage": "year if shown",
+      "region": "wine region if obvious from name"
+    }
+  ]
+}`;
 ```
 
 #### Stage 2: Detailed Research
 ```javascript
-// In processWinesInBatches() - parallel processing
-const researchPrompt = `Research detailed information for these wines. Use web resources to find current data.
+// In processWinesInBatches() - parallel processing with comprehensive research
+const researchPrompt = `Research detailed information for these wines. For each wine in the exact same order, provide complete details including both menu and retail pricing.
 
-For each wine, find:
-1. **Average U.S. retail price** - Check Wine-Searcher, Wine.com, Total Wine
-2. **Ratings** - Vivino crowd ratings, Wine Spectator scores
-3. **Tasting notes** - Flavor profile, characteristics
-4. **Food pairing** - Recommended dishes and cuisines`;
+For each wine in the EXACT SAME ORDER, research and return:
+1. **Current U.S. retail price** - Check Wine-Searcher, Wine.com, Total Wine
+2. **Ratings** - Vivino crowd ratings, Wine Spectator scores, other critic reviews  
+3. **Tasting notes** - Flavor profile from Vivino, winery notes
+4. **Food pairing** - Recommended dishes and cuisines
+5. **Wine details** - Producer, vintage, region, varietal, style
+
+Return valid JSON with one wine object for each input wine. Maintain exact same order as input.`;
 ```
 
 ### Price Processing Logic
 
-The `processPricing()` method implements smart price handling:
+The `processExtractedWineData()` method implements smart price handling with hidden conversion:
 
-1. **Priority**: Bottle price > Glass price converted > Glass price only
-2. **Conversion**: Glass price × 5 = Estimated bottle price
-3. **Display**: Only show bottle prices, hide glass prices
-4. **Notes**: Show conversion notes when glass price was converted
+1. **Priority**: Bottle price > Glass price converted to bottle > No price
+2. **Silent Conversion**: Glass price × 5 = Estimated bottle price (conversion details hidden from users)
+3. **Clean Display**: Only show final menu price, no conversion notes or technical details
+4. **Markup Calculation**: Compare menu vs retail prices with percentage markup display
 
 ```javascript
-processPricing(wines) {
+processExtractedWineData(wines) {
     return wines.map(wine => {
         let processedWine = { ...wine };
         
-        // If both glass and bottle prices exist, prioritize bottle price
-        if (wine.bottle_price && wine.bottle_price !== null) {
-            processedWine.final_price = wine.bottle_price;
-            processedWine.price_source = 'bottle';
+        // Process pricing - normalize everything to bottle prices
+        if (wine.bottle_price && wine.bottle_price !== null && wine.bottle_price !== 'null') {
+            // Use bottle price directly
+            processedWine.menu_price = wine.bottle_price;
         }
-        // If only glass price exists, convert to bottle price (multiply by 5)
-        else if (wine.glass_price && wine.glass_price !== null) {
+        else if (wine.glass_price && wine.glass_price !== null && wine.glass_price !== 'null') {
+            // Convert glass price to bottle price (multiply by 5) - hide conversion details
             const glassPrice = this.extractNumericPrice(wine.glass_price);
             if (glassPrice) {
                 const bottlePrice = glassPrice * 5;
-                processedWine.final_price = `$${bottlePrice}`;
-                processedWine.price_source = 'glass_converted';
-                processedWine.conversion_note = `Estimated from glass price (${wine.glass_price} × 5)`;
+                processedWine.menu_price = `$${bottlePrice}`;
             }
         }
+        
         return processedWine;
     });
+}
+
+// Markup calculation utility
+calculateMarkup(menuPrice, retailPrice) {
+    const menu = extractPrice(menuPrice);
+    const retail = extractPrice(retailPrice);
+    if (!menu || !retail || retail === 0) return 'N/A';
+    const markup = ((menu - retail) / retail) * 100;
+    return markup > 0 ? `+${markup.toFixed(0)}%` : `${markup.toFixed(0)}%`;
 }
 ```
 
@@ -257,15 +330,16 @@ async processWinesInBatches(wines) {
 
 ### Context Passing for Follow-up Questions
 
-The system maintains wine context for conversational queries:
+The system silently maintains wine context for conversational queries without spam:
 
 ```javascript
-// In processWithAI() for text queries
-if (this.app.currentWineList && this.app.currentWineList.wines.length > 0) {
+// In processWithAI() for text queries - clean context passing
+if (this.app.currentWineList && this.app.currentWineList.wines && this.app.currentWineList.wines.length > 0) {
     const wineContext = JSON.stringify(this.app.currentWineList, null, 2);
-    console.log('Passing wine context to LLM:', wineContext);
+    console.log('=== Wine Context Being Passed to LLM ===');
+    console.log('Wine count:', this.app.currentWineList.wines.length);
+    // Context passed silently - no "Using context from X wines" messages shown to user
     systemPrompt += "\n\nCurrent wine list context (includes menu prices, retail prices, ratings, tasting notes, food pairings, producer, vintage, region, varietal, and sources):\n" + wineContext;
-    userInput = `Based on the detailed wine information provided in the system context, ${userInput}`;
 }
 ```
 
@@ -305,12 +379,15 @@ get effectiveTemperature() {
 
 ### Atomic Processing Design
 
-The application ensures atomic processing - no partial results are shown:
+The application ensures atomic processing with clean user experience:
 
 1. **Image Analysis**: Complete extraction + research before showing results
-2. **Processing Indicator**: Shows "Analyzing wines and researching..." during processing
+2. **Processing Indicator**: Shows "🔍 Analyzing wines and researching detailed information..." during processing
 3. **State Management**: `processing` flag blocks user input during operations
-4. **Result Display**: Only updates wines tab when complete processing is finished
+4. **Clean Results**: Only updates wines tab when complete processing is finished
+5. **No Spam Messages**: Technical details and conversion notes hidden from users
+6. **Wine Type Recognition**: Automatic classification and color-coding in results
+7. **Pricing Grid**: Menu price, retail price, and markup displayed in organized layout
 
 ## Privacy & Security
 - Client-side only - no server data storage
@@ -318,3 +395,26 @@ The application ensures atomic processing - no partial results are shown:
 - Debug logs remain local
 - No analytics or external tracking
 - Wine images processed locally before AI analysis
+
+## Recent Implementation Updates
+
+### User Experience Improvements (Current State)
+- **Simplified Workflow**: Removed all clear/trash functionality - users simply reload page to reset
+- **Professional Appearance**: Standardized opacity across all tabs using `var(--background-color)` for consistent dark theme
+- **Clean Pricing Display**: Glass conversion happens silently behind scenes, users only see clean final prices
+- **Visual Wine Classification**: Automatic wine type detection with color-coded left borders for easy identification
+- **Contextual Intelligence**: Wine context passed to LLMs without showing technical "Using context" messages
+
+### Design Evolution
+- **Dark Wine Cellar Theme**: Rich, professional aesthetic with tiling wine cellar background
+- **High Contrast Typography**: Improved readability with carefully chosen text colors
+- **Bubble Interface**: Rounded containers with wine-inspired styling throughout
+- **Pricing Grid**: Organized display showing menu price, retail price, and markup percentage
+- **Color Psychology**: Wine type colors (burgundy, gold, pink, champagne) enhance user experience
+
+### Technical Refinements
+- **Hidden Complexity**: Technical details like price conversion notes removed from user-facing displays
+- **Atomic Processing**: Complete wine analysis before showing any results to users
+- **Enhanced Context**: Full wine details (ratings, tasting notes, pairings) available for chat follow-ups
+- **Model Accuracy**: Updated all vision model labels to reflect actual capabilities
+- **Consistent Styling**: Unified visual approach across Chat, Wines, Settings, and Debug tabs
