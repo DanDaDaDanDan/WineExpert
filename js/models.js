@@ -302,7 +302,11 @@ export class AIModels {
         ];
         
         // Use the selected model if it supports vision, otherwise use gpt-4o
-        const visionModels = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-4-vision-preview'];
+        const visionModels = [
+            'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-4-vision-preview',
+            'o1', 'o3', 'o4-mini', 
+            'gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano', 'gpt-4.5-preview'
+        ];
         const modelToUse = visionModels.includes(this.app.openaiModel) ? this.app.openaiModel : 'gpt-4o';
         
         const body = {
@@ -489,7 +493,7 @@ export class AIModels {
     }
     
     async callDeepSeekVisionAPI(prompt, imageDataUrl) {
-        // DeepSeek may not support vision yet, but using OpenAI-compatible format
+        // DeepSeek vision models support multimodal input
         const messages = [
             {
                 role: 'user',
@@ -508,8 +512,12 @@ export class AIModels {
             }
         ];
         
+        // Use the selected model if it supports vision, otherwise fall back to deepseek-vl2
+        const visionModels = ['deepseek-vl2', 'deepseek-vl2-small', 'janus-pro-7b'];
+        const modelToUse = visionModels.includes(this.app.deepseekModel) ? this.app.deepseekModel : 'deepseek-vl2';
+        
         const body = {
-            model: this.app.deepseekModel,
+            model: modelToUse,
             messages: messages,
             response_format: { type: "json_object" },
             temperature: this.app.effectiveTemperature,

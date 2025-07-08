@@ -29,7 +29,7 @@ window.wineExpertApp = function() {
         
         // DeepSeek settings
         deepseekKey: localStorage.getItem('deepseek_api_key') || '',
-        deepseekModel: localStorage.getItem('deepseek_model') || 'deepseek-chat',
+        deepseekModel: localStorage.getItem('deepseek_model') || 'deepseek-vl2',
         
         // Temperature settings
         temperature: parseFloat(localStorage.getItem('temperature') || '0.8'),
@@ -184,17 +184,6 @@ window.wineExpertApp = function() {
                 });
             });
             
-            // Wine list management
-            this.clearWineList = () => {
-                this.currentWineList = null;
-                this.extractedWineList = null;
-                this.imageUploaded = false;
-                this.messages.push({
-                    sender: 'System',
-                    content: 'Wine collection cleared. Upload a new wine image to start analyzing.',
-                    type: 'system'
-                });
-            };
             
             // Utility methods
             this.copyToClipboard = async (text) => {

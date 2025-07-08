@@ -249,14 +249,14 @@
                             <label>Model</label>
                             <select x-model="openaiModel" @change="saveSettings()">
                                 <option value="gpt-4o">GPT-4o (✓ Vision)</option>
-                                <option value="o1">O1</option>
-                                <option value="o3-mini">O3 Mini</option>
-                                <option value="o3">O3</option>
-                                <option value="o4-mini">O4 Mini</option>
-                                <option value="gpt-4.1">GPT-4.1</option>
-                                <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
-                                <option value="gpt-4.1-nano">GPT-4.1 Nano</option>
-                                <option value="gpt-4.5-preview">GPT-4.5 Preview</option>
+                                <option value="o1">O1 (✓ Vision)</option>
+                                <option value="o3-mini">O3 Mini (No Vision)</option>
+                                <option value="o3">O3 (✓ Vision)</option>
+                                <option value="o4-mini">O4 Mini (✓ Vision)</option>
+                                <option value="gpt-4.1">GPT-4.1 (✓ Vision)</option>
+                                <option value="gpt-4.1-mini">GPT-4.1 Mini (✓ Vision)</option>
+                                <option value="gpt-4.1-nano">GPT-4.1 Nano (✓ Vision)</option>
+                                <option value="gpt-4.5-preview">GPT-4.5 Preview (✓ Vision)</option>
                             </select>
                             <div class="temperature-description" style="margin-top: 0.5rem;">
                                 <small>✓ = Supports image analysis for wine uploads</small>
@@ -347,12 +347,15 @@
                         <div class="form-group">
                             <label>Model</label>
                             <select x-model="deepseekModel" @change="saveSettings()">
-                                <option value="deepseek-chat">DeepSeek Chat (? Vision)</option>
-                                <option value="deepseek-reasoner">DeepSeek Reasoner (? Vision)</option>
-                                <option value="deepseek-coder">DeepSeek Coder (? Vision)</option>
+                                <option value="deepseek-vl2">DeepSeek-VL2 (✓ Vision)</option>
+                                <option value="deepseek-vl2-small">DeepSeek-VL2 Small (✓ Vision)</option>
+                                <option value="janus-pro-7b">Janus-Pro-7B (✓ Vision + Generation)</option>
+                                <option value="deepseek-chat">DeepSeek Chat (No Vision)</option>
+                                <option value="deepseek-reasoner">DeepSeek Reasoner (No Vision)</option>
+                                <option value="deepseek-coder">DeepSeek Coder (No Vision)</option>
                             </select>
                             <div class="temperature-description" style="margin-top: 0.5rem;">
-                                <small>? = Vision support may be limited or experimental</small>
+                                <small>VL2 and Janus-Pro models support multimodal vision understanding</small>
                             </div>
                         </div>
                     </div>
