@@ -7,6 +7,12 @@ export class DebugManager {
     logDebug(type, provider, model, data) {
         if (!this.app.debugEnabled) return;
         
+        // Ensure debugLog is an array
+        if (!Array.isArray(this.app.debugLog)) {
+            console.error('debugLog is not an array:', typeof this.app.debugLog, this.app.debugLog);
+            this.app.debugLog = [];
+        }
+        
         const processedData = { ...data };
         
         // Convert duration from milliseconds to seconds
@@ -22,11 +28,20 @@ export class DebugManager {
             ...processedData
         };
         
-        this.app.debugLog.unshift(entry); // Add to beginning for newest first
-        
-        // Keep only last 100 entries to prevent memory issues
-        if (this.app.debugLog.length > 100) {
-            this.app.debugLog = this.app.debugLog.slice(0, 100);
+        try {
+            this.app.debugLog.unshift(entry); // Add to beginning for newest first
+            
+            // Keep only last 100 entries to prevent memory issues
+            if (this.app.debugLog.length > 100) {
+                this.app.debugLog = this.app.debugLog.slice(0, 100);
+            }
+        } catch (error) {
+            console.error('Error adding debug log entry:', error);
+            console.error('debugLog type:', typeof this.app.debugLog);
+            console.error('debugLog value:', this.app.debugLog);
+            // Reinitialize as empty array and try again
+            this.app.debugLog = [];
+            this.app.debugLog.unshift(entry);
         }
     }
     

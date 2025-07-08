@@ -38,6 +38,7 @@ window.wineExpertApp = function() {
         debugEnabled: localStorage.getItem('debug_enabled') === 'true' || localStorage.getItem('debug_enabled') === null,
         debugLog: [],
         debugPrettyMode: localStorage.getItem('debug_pretty_mode') !== 'false', // Default to true
+        mobileDebugEnabled: localStorage.getItem('mobile_debug_enabled') === 'true', // Default to false
         
         // Models that don't support temperature (reasoning models)
         reasoningModels: [
@@ -87,11 +88,34 @@ window.wineExpertApp = function() {
         extractedWineList: null, // Store the raw extracted wine list (for research input only)
         
         async init() {
+            // Ensure arrays are properly initialized
+            if (!Array.isArray(this.debugLog)) {
+                console.log('Initializing debugLog as empty array');
+                this.debugLog = [];
+            }
+            if (!Array.isArray(this.messages)) {
+                console.log('Initializing messages as empty array');
+                this.messages = [];
+            }
+            
             // Initialize managers with the Alpine.js reactive proxy (this)
             this.aiModels = new AIModels(this);
             this.chatManager = new ChatManager(this);
             this.debugManager = new DebugManager(this);
             this.settingsManager = new SettingsManager(this);
+            
+            // Add welcome message if no API key is set
+            if (!this.apiKey) {
+                // Ensure messages is an array before pushing
+                if (!Array.isArray(this.messages)) {
+                    this.messages = [];
+                }
+                this.messages.push({
+                    sender: 'Wine Expert',
+                    content: '🍷 **Welcome to Wine Expert!**\n\nTo get started:\n1. Go to **Settings** and add your AI API key\n2. Return to **Chat** and upload a wine image\n3. Ask me anything about your wines!\n\nI can analyze wine lists, menus, and bottle photos.',
+                    type: 'npc-left'
+                });
+            }
             
             // Bind methods to this Alpine instance
             // Chat methods
@@ -106,16 +130,47 @@ window.wineExpertApp = function() {
             // Settings methods
             this.saveSettings = () => this.settingsManager.saveSettings();
             
+            // Debug log function for mobile
+            this.debugLog = (message) => {
+                console.log(message);
+                // Also show debug messages in chat for mobile debugging (when enabled)
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                if (isMobile && this.mobileDebugEnabled) {
+                    // Ensure messages is an array before pushing
+                    if (!Array.isArray(this.messages)) {
+                        this.messages = [];
+                    }
+                    this.messages.push({
+                        sender: 'Debug',
+                        content: `🔧 ${message}`,
+                        type: 'system'
+                    });
+                }
+            };
+
             // Upload button click handler
             this.handleUploadClick = (event) => {
-                console.log('Upload button clicked:', event);
+                console.log('Upload button clicked:', event.type);
                 console.log('API Key available:', !!this.apiKey);
                 console.log('Processing:', this.processing);
-                console.log('Touch event:', event.type);
                 
                 // Prevent if disabled
                 if (!this.apiKey || this.processing) {
-                    console.log('Upload prevented - no API key or processing');
+                    if (!this.apiKey) {
+                        // Ensure messages is an array before pushing
+                        if (!Array.isArray(this.messages)) {
+                            this.messages = [];
+                        }
+                        // Show clear error message for missing API key
+                        this.messages.push({
+                            sender: 'System',
+                            content: '⚠️ **API Key Required**\n\nPlease set your API key in the Settings tab before uploading images.',
+                            type: 'system'
+                        });
+                        console.log('Upload prevented - no API key');
+                    } else {
+                        console.log('Upload prevented - processing in progress');
+                    }
                     event.preventDefault();
                     return false;
                 }
@@ -129,8 +184,7 @@ window.wineExpertApp = function() {
                 const fileInput = this.$refs.imageInput;
                 if (fileInput) {
                     console.log('Triggering file input click');
-                    console.log('File input element:', fileInput);
-                    console.log('User agent:', navigator.userAgent);
+                    console.log('User agent:', navigator.userAgent.substring(0, 50));
                     
                     // Reset the input value to ensure change event fires even for same file
                     fileInput.value = '';
@@ -155,13 +209,16 @@ window.wineExpertApp = function() {
                         };
                         
                         document.body.appendChild(tempInput);
+                        console.log('About to trigger temp input click');
                         tempInput.click();
+                        console.log('Temp input click triggered');
                     } else {
                         // Desktop approach
                         try {
                             fileInput.click();
+                            console.log('Desktop file input click successful');
                         } catch (error) {
-                            console.error('Error triggering file input click:', error);
+                            console.log('Error triggering file input click:', error.message);
                             // Fallback: try dispatching a click event
                             const clickEvent = new MouseEvent('click', {
                                 view: window,
@@ -169,10 +226,11 @@ window.wineExpertApp = function() {
                                 cancelable: true
                             });
                             fileInput.dispatchEvent(clickEvent);
+                            console.log('Fallback click event dispatched');
                         }
                     }
                 } else {
-                    console.error('File input not found');
+                    console.log('File input not found');
                 }
                 
                 if (event.type !== 'touchend') {
@@ -183,9 +241,8 @@ window.wineExpertApp = function() {
             
             // Image handling methods
             this.handleImageUpload = async (event) => {
-                console.log('handleImageUpload triggered:', event);
-                console.log('Files:', event.target.files);
-                console.log('File input value:', event.target.value);
+                console.log('handleImageUpload triggered');
+                console.log('Files count:', event.target.files ? event.target.files.length : 0);
                 
                 const file = event.target.files[0];
                 if (!file) {
@@ -194,11 +251,7 @@ window.wineExpertApp = function() {
                     return;
                 }
                 if (file.type.startsWith('image/')) {
-                    console.log('Image upload started:', {
-                        fileName: file.name,
-                        fileSize: file.size,
-                        fileType: file.type
-                    });
+                    console.log('Image upload started:', file.name, '(' + file.size + ' bytes)');
                     
                     // Set processing flag immediately to disable chat input
                     this.processing = true;
@@ -283,6 +336,85 @@ window.wineExpertApp = function() {
                 
                 const markup = ((menu - retail) / retail) * 100;
                 return markup > 0 ? `+${markup.toFixed(0)}%` : `${markup.toFixed(0)}%`;
+            };
+
+            // Wine analytics generator
+            this.generateWineAnalytics = () => {
+                console.log('generateWineAnalytics called');
+                console.log('currentWineList:', this.currentWineList);
+                if (!this.currentWineList?.wines?.length) {
+                    console.log('No wines found for analytics');
+                    return null;
+                }
+
+                const wines = this.currentWineList.wines;
+                console.log('Sample wine for analytics:', wines[0]);
+                const extractPrice = (priceStr) => {
+                    if (typeof priceStr !== 'string') return null;
+                    const match = priceStr.match(/[\d,]+\.?\d*/);
+                    return match ? parseFloat(match[0].replace(/,/g, '')) : null;
+                };
+
+                // Calculate markups for wines with both prices
+                const winesWithMarkup = wines.filter(wine => {
+                    const menu = extractPrice(wine.menu_price);
+                    const retail = extractPrice(wine.retail_price);
+                    console.log(`Wine: ${wine.name}, menu: ${wine.menu_price} (${menu}), retail: ${wine.retail_price} (${retail})`);
+                    return menu && retail && retail > 0;
+                }).map(wine => {
+                    const menu = extractPrice(wine.menu_price);
+                    const retail = extractPrice(wine.retail_price);
+                    const markup = ((menu - retail) / retail) * 100;
+                    return { ...wine, markupPercent: markup };
+                });
+                
+                console.log('Wines with markup:', winesWithMarkup.length);
+
+                // Median markup
+                let medianMarkup = null;
+                if (winesWithMarkup.length > 0) {
+                    const markups = winesWithMarkup.map(w => w.markupPercent).sort((a, b) => a - b);
+                    const mid = Math.floor(markups.length / 2);
+                    medianMarkup = markups.length % 2 === 0 
+                        ? (markups[mid - 1] + markups[mid]) / 2 
+                        : markups[mid];
+                }
+
+                // Best value by wine type (lowest markup)
+                const wineTypes = ['red', 'white', 'rosé', 'sparkling', 'dessert'];
+                const bestValueByType = {};
+                
+                wineTypes.forEach(type => {
+                    const typeWines = winesWithMarkup.filter(wine => 
+                        wine.wine_type && wine.wine_type.toLowerCase().includes(type.toLowerCase())
+                    );
+                    if (typeWines.length > 0) {
+                        bestValueByType[type] = typeWines.reduce((best, current) => 
+                            current.markupPercent < best.markupPercent ? current : best
+                        );
+                    }
+                });
+
+                // Highest rated wine
+                let highestRated = null;
+                const winesWithRatings = wines.filter(wine => wine.ratings?.vivino);
+                if (winesWithRatings.length > 0) {
+                    highestRated = winesWithRatings.reduce((best, current) => {
+                        const currentRating = parseFloat(current.ratings.vivino.match(/[\d.]+/)?.[0] || 0);
+                        const bestRating = parseFloat(best.ratings.vivino.match(/[\d.]+/)?.[0] || 0);
+                        return currentRating > bestRating ? current : best;
+                    });
+                }
+
+                const result = {
+                    medianMarkup,
+                    bestValueByType,
+                    highestRated,
+                    totalWines: wines.length,
+                    winesWithPricing: winesWithMarkup.length
+                };
+                console.log('Analytics result:', result);
+                return result;
             };
             
             // Utility methods

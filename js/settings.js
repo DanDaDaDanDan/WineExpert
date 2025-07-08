@@ -17,5 +17,6 @@ export class SettingsManager {
         localStorage.setItem('temperature', this.app.temperature.toString());
         localStorage.setItem('debug_enabled', this.app.debugEnabled.toString());
         localStorage.setItem('debug_pretty_mode', this.app.debugPrettyMode.toString());
+        localStorage.setItem('mobile_debug_enabled', this.app.mobileDebugEnabled.toString());
     }
 } 

@@ -14,7 +14,35 @@ export class ChatManager {
     }
     
     async sendMessage() {
-        if (!this.app.currentInput.trim() || !this.app.apiKey || this.app.processing || !this.app.imageUploaded) return;
+        // Check for API key first
+        if (!this.app.apiKey) {
+            // Ensure messages is an array before pushing
+            if (!Array.isArray(this.app.messages)) {
+                this.app.messages = [];
+            }
+            this.app.messages.push({
+                sender: 'System',
+                content: '⚠️ **API Key Required**\n\nPlease set your API key in the Settings tab before sending messages.',
+                type: 'system'
+            });
+            return;
+        }
+        
+        // Check for image upload
+        if (!this.app.imageUploaded) {
+            // Ensure messages is an array before pushing
+            if (!Array.isArray(this.app.messages)) {
+                this.app.messages = [];
+            }
+            this.app.messages.push({
+                sender: 'System',
+                content: '📷 **Image Required**\n\nPlease upload a wine image first using the camera button.',
+                type: 'system'
+            });
+            return;
+        }
+        
+        if (!this.app.currentInput.trim() || this.app.processing) return;
         
         const userMessage = this.app.currentInput.trim();
         this.app.currentInput = '';
@@ -194,19 +222,28 @@ IMPORTANT: Always respond with valid JSON in this format:
                     // For images: Store extracted data and do research
                     const extractedWines = this.processExtractedWineData(response.wines);
                     
+                    const existingCount = this.app.currentWineList?.wines?.length || 0;
+                    const totalAfterAddition = existingCount + extractedWines.length;
+                    
+                    let message = `🍷 Found ${extractedWines.length} new wine${extractedWines.length > 1 ? 's' : ''}!`;
+                    if (existingCount > 0) {
+                        message += ` Adding to collection (${existingCount} → ${totalAfterAddition} total).`;
+                    }
+                    message += ' Researching detailed information...';
+                    
                     this.app.messages.push({
                         sender: 'System',
-                        content: `🍷 Found ${extractedWines.length} wines! Researching detailed information...`,
+                        content: message,
                         type: 'system'
                     });
                     
                     // Store extracted data for research use only
                     this.app.extractedWineList = { wines: extractedWines };
                     
-                    // Clear current wine list during processing
-                    this.app.currentWineList = null;
+                    // Keep existing wine list - don't clear it
+                    // this.app.currentWineList = null; // REMOVED
                     
-                    // Do complete research - this will set currentWineList
+                    // Do complete research - this will add to currentWineList
                     await this.processWinesInBatches(extractedWines);
                     
                     // Only show results after everything is complete
@@ -316,7 +353,8 @@ IMPORTANT: Always respond with valid JSON in this format:
             return;
         }
         
-        let formattedContent = `Found ${response.wines.length} wine${response.wines.length > 1 ? 's' : ''} in the image:\n\n`;
+        const totalWines = this.app.currentWineList?.wines?.length || 0;
+        let formattedContent = `Wine collection now has ${totalWines} wine${totalWines > 1 ? 's' : ''}:\n\n`;
         
         response.wines.forEach((wine, index) => {
             formattedContent += `**${index + 1}. ${wine.name}**\n`;
@@ -431,14 +469,17 @@ IMPORTANT: Always respond with valid JSON in this format:
             researchedWines = [];
         }
 
-        // Store the researched results directly as current wine list
-        if (researchedWines.length > 0) {
-            console.log('Setting currentWineList with researched wines:', researchedWines.length);
-            console.log('Sample researched wine:', researchedWines[0]);
-            this.app.currentWineList = { wines: researchedWines };
+        // Append researched wines to existing wine list
+        const winesToAdd = researchedWines.length > 0 ? researchedWines : extractedWines;
+        
+        if (this.app.currentWineList && this.app.currentWineList.wines) {
+            // Add new wines to existing collection
+            console.log('Adding', winesToAdd.length, 'wines to existing collection of', this.app.currentWineList.wines.length);
+            this.app.currentWineList.wines.push(...winesToAdd);
         } else {
-            console.log('Research failed, using extracted wines as fallback:', extractedWines.length);
-            this.app.currentWineList = { wines: extractedWines };
+            // First wine upload - create new collection
+            console.log('Creating new wine collection with', winesToAdd.length, 'wines');
+            this.app.currentWineList = { wines: winesToAdd };
         }
         
         console.log('Final wine list set with wines count:', this.app.currentWineList?.wines?.length);
@@ -501,7 +542,7 @@ RESPONSE FORMAT: Return valid JSON with this exact structure:
     {
       "name": "exact wine name from list",
       "menu_price": "menu price from input if available",
-      "retail_price": "$XX average retail",
+      "retail_price": "$XX retail",
       "ratings": {
         "vivino": "X.X/5 (XXX reviews)",
         "wine_spectator": "XX points",

@@ -78,7 +78,7 @@
                         <textarea 
                             x-model="currentInput" 
                             @keydown="handleInputKeydown($event)"
-                            :placeholder="imageUploaded ? 'Ask me about the wines...' : 'Upload a wine image first using the camera button'"
+                            :placeholder="!apiKey ? 'Set API key in Settings first' : (!imageUploaded ? 'Upload wine image first' : 'Ask me about the wines...')"
                             :disabled="!apiKey || processing || !imageUploaded"
                             rows="1"
                         ></textarea>
@@ -105,6 +105,46 @@
                             <span x-text="currentWineList && currentWineList.wines ? currentWineList.wines.length : 0"></span> wine<span x-show="currentWineList && currentWineList.wines && currentWineList.wines.length > 1">s</span> in collection
                         </p>
                     </div>
+
+                    <!-- Wine Analytics Summary -->
+                    <div x-show="!processing && currentWineList && currentWineList.wines && currentWineList.wines.length > 0" class="wine-analytics tab-container" x-data="{ analytics: null }" x-init="analytics = generateWineAnalytics(); $watch('currentWineList', () => analytics = generateWineAnalytics())">
+                        <div x-show="analytics">
+                            
+                            <div class="analytics-grid">
+                                <!-- Median Markup -->
+                                <div x-show="analytics && analytics.medianMarkup !== null" class="analytics-card markup-card">
+                                    <div class="analytics-icon">💰</div>
+                                    <div class="analytics-content">
+                                        <div class="analytics-label">Median Markup</div>
+                                        <div class="analytics-value" x-text="analytics ? '+' + analytics.medianMarkup.toFixed(0) + '%' : ''"></div>
+                                        <div class="analytics-subtitle" x-text="analytics ? 'From ' + analytics.winesWithPricing + ' wines with pricing' : ''"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Highest Rated -->
+                                <div x-show="analytics && analytics.highestRated" class="analytics-card rating-card">
+                                    <div class="analytics-icon">⭐</div>
+                                    <div class="analytics-content">
+                                        <div class="analytics-label">Top Rated</div>
+                                        <div class="analytics-value" x-text="analytics && analytics.highestRated ? analytics.highestRated.ratings.vivino.split('(')[0].trim() : ''"></div>
+                                        <div class="analytics-subtitle" x-text="analytics && analytics.highestRated ? analytics.highestRated.name.substring(0, 30) + (analytics.highestRated.name.length > 30 ? '...' : '') : ''"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Best Values by Type -->
+                                <template x-for="(wine, type) in (analytics ? analytics.bestValueByType : {})" :key="type">
+                                    <div class="analytics-card value-card">
+                                        <div class="analytics-icon" x-text="type === 'red' ? '🍷' : type === 'white' ? '🥂' : type === 'rosé' ? '🌹' : type === 'sparkling' ? '🍾' : '🍯'"></div>
+                                        <div class="analytics-content">
+                                            <div class="analytics-label" x-text="'Best ' + type.charAt(0).toUpperCase() + type.slice(1) + ' Value'"></div>
+                                            <div class="analytics-value" x-text="'+' + wine.markupPercent.toFixed(0) + '%'"></div>
+                                            <div class="analytics-subtitle" x-text="wine.name.substring(0, 25) + (wine.name.length > 25 ? '...' : '')"></div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
                     
                     <div x-show="!processing && currentWineList && currentWineList.wines && currentWineList.wines.length > 0" class="wines-grid">
                         <template x-for="(wine, index) in (currentWineList ? currentWineList.wines : [])" :key="index">
@@ -115,18 +155,18 @@
                                 <div class="wine-details">
                                     <!-- Pricing Comparison -->
                                     <div class="wine-pricing-section" x-show="wine.menu_price || wine.retail_price">
-                                        <div class="wine-pricing-grid">
-                                            <div class="wine-price-item" x-show="wine.menu_price">
-                                                <div class="wine-price-label">Menu Price</div>
-                                                <div class="wine-price-amount" x-text="wine.menu_price"></div>
+                                        <div class="wine-pricing-stack">
+                                            <div class="wine-price-row" x-show="wine.menu_price">
+                                                <span class="wine-price-label">Menu:</span>
+                                                <span class="wine-price-amount" x-text="wine.menu_price"></span>
                                             </div>
-                                            <div class="wine-price-item" x-show="wine.retail_price">
-                                                <div class="wine-price-label">Retail Price</div>
-                                                <div class="wine-price-amount" x-text="wine.retail_price"></div>
+                                            <div class="wine-price-row" x-show="wine.retail_price">
+                                                <span class="wine-price-label">Retail:</span>
+                                                <span class="wine-price-amount" x-text="wine.retail_price"></span>
                                             </div>
-                                            <div class="wine-markup" x-show="wine.menu_price && wine.retail_price">
-                                                <div class="wine-markup-label">Markup</div>
-                                                <div class="wine-markup-value" x-text="calculateMarkup(wine.menu_price, wine.retail_price)"></div>
+                                            <div class="wine-price-row wine-markup-row" x-show="wine.menu_price && wine.retail_price">
+                                                <span class="wine-price-label">Markup:</span>
+                                                <span class="wine-markup-value" x-text="calculateMarkup(wine.menu_price, wine.retail_price)"></span>
                                             </div>
                                         </div>
                                     </div>
@@ -401,6 +441,10 @@
                         <label class="debug-toggle">
                             <input type="checkbox" x-model="debugPrettyMode" @change="saveSettings()">
                             Pretty JSON Mode
+                        </label>
+                        <label class="debug-toggle">
+                            <input type="checkbox" x-model="mobileDebugEnabled" @change="saveSettings()">
+                            Mobile Debug in Chat (iOS/Android)
                         </label>
                     </div>
                     
