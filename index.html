@@ -62,17 +62,19 @@
                             x-ref="imageInput"
                             @change="handleImageUpload($event)"
                             accept="image/*"
-                            style="display: none;"
+                            style="position: absolute; left: -9999px; width: 1px; height: 1px;"
                             id="wine-image-upload"
                         />
-                        <label 
-                            for="wine-image-upload"
+                        <button 
+                            @click="handleUploadClick($event)"
+                            @touchend="handleUploadClick($event)"
                             class="upload-button"
-                            :class="{'disabled': !apiKey || processing}"
+                            :disabled="!apiKey || processing"
                             :title="!apiKey ? 'Please set API key in Settings' : 'Upload and analyze wine image'"
+                            type="button"
                         >
                             📷
-                        </label>
+                        </button>
                         <textarea 
                             x-model="currentInput" 
                             @keydown="handleInputKeydown($event)"

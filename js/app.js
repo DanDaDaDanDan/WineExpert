@@ -106,10 +106,90 @@ window.wineExpertApp = function() {
             // Settings methods
             this.saveSettings = () => this.settingsManager.saveSettings();
             
+            // Upload button click handler
+            this.handleUploadClick = (event) => {
+                console.log('Upload button clicked:', event);
+                console.log('API Key available:', !!this.apiKey);
+                console.log('Processing:', this.processing);
+                console.log('Touch event:', event.type);
+                
+                // Prevent if disabled
+                if (!this.apiKey || this.processing) {
+                    console.log('Upload prevented - no API key or processing');
+                    event.preventDefault();
+                    return false;
+                }
+                
+                // Prevent double-triggering from both click and touchend
+                if (event.type === 'touchend') {
+                    event.preventDefault();
+                }
+                
+                // Trigger the file input
+                const fileInput = this.$refs.imageInput;
+                if (fileInput) {
+                    console.log('Triggering file input click');
+                    console.log('File input element:', fileInput);
+                    console.log('User agent:', navigator.userAgent);
+                    
+                    // Reset the input value to ensure change event fires even for same file
+                    fileInput.value = '';
+                    
+                    // For mobile browsers, try multiple approaches
+                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                    
+                    if (isMobile) {
+                        console.log('Mobile browser detected, using mobile-specific approach');
+                        
+                        // Create a temporary file input for mobile
+                        const tempInput = document.createElement('input');
+                        tempInput.type = 'file';
+                        tempInput.accept = 'image/*';
+                        tempInput.style.position = 'absolute';
+                        tempInput.style.left = '-9999px';
+                        
+                        tempInput.onchange = (e) => {
+                            console.log('Temp input change triggered');
+                            this.handleImageUpload(e);
+                            document.body.removeChild(tempInput);
+                        };
+                        
+                        document.body.appendChild(tempInput);
+                        tempInput.click();
+                    } else {
+                        // Desktop approach
+                        try {
+                            fileInput.click();
+                        } catch (error) {
+                            console.error('Error triggering file input click:', error);
+                            // Fallback: try dispatching a click event
+                            const clickEvent = new MouseEvent('click', {
+                                view: window,
+                                bubbles: true,
+                                cancelable: true
+                            });
+                            fileInput.dispatchEvent(clickEvent);
+                        }
+                    }
+                } else {
+                    console.error('File input not found');
+                }
+                
+                if (event.type !== 'touchend') {
+                    event.preventDefault();
+                }
+                return false;
+            };
+            
             // Image handling methods
             this.handleImageUpload = async (event) => {
+                console.log('handleImageUpload triggered:', event);
+                console.log('Files:', event.target.files);
+                console.log('File input value:', event.target.value);
+                
                 const file = event.target.files[0];
                 if (!file) {
+                    console.log('No file selected');
                     // No file selected, don't set processing flag
                     return;
                 }

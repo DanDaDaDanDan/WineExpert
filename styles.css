@@ -617,22 +617,21 @@ body {
     touch-action: manipulation; /* Improve touch responsiveness */
 }
 
-.chat-input .upload-button:hover:not(.disabled),
-.chat-input .upload-button:active:not(.disabled) {
+.chat-input .upload-button:hover:not(:disabled),
+.chat-input .upload-button:active:not(:disabled) {
     background-color: var(--primary-color);
     color: white;
     border-color: var(--primary-color);
     transform: scale(1.05);
 }
 
-.chat-input .upload-button:active:not(.disabled) {
+.chat-input .upload-button:active:not(:disabled) {
     transform: scale(0.95);
 }
 
-.chat-input .upload-button.disabled {
+.chat-input .upload-button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    pointer-events: none;
 }
 
 
