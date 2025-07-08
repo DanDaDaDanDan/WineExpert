@@ -33,6 +33,7 @@ html, body {
     height: 100%;
     margin: 0;
     padding: 0;
+    overflow: hidden; /* Prevent body scrolling */
 }
 
 body {
@@ -51,6 +52,7 @@ body {
     display: flex;
     flex-direction: column;
     height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for mobile */
     min-height: 0;
 }
 
@@ -60,6 +62,7 @@ body {
     border-bottom: 1px solid var(--border-color);
     box-shadow: var(--shadow);
     z-index: 100;
+    flex-shrink: 0;
 }
 
 .nav-content {
@@ -125,22 +128,19 @@ body {
 .chat-view {
     display: flex;
     height: 100%;
-    min-height: 100%;
     justify-content: center;
     align-items: stretch;
     padding: 2rem;
     overflow: hidden;
-    position: relative;
 }
 
 /* Chat Panel Full Width */
 .chat-panel-full {
     width: 100%;
     max-width: 800px;
-    height: 100%;
     display: flex;
     flex-direction: column;
-    position: relative;
+    gap: 1rem;
 }
 
 /* Chat Header */
@@ -157,16 +157,11 @@ body {
 
 /* Chat Messages Container */
 .chat-messages {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 120px; /* Leave space for input at bottom */
+    flex: 1;
     display: flex;
     flex-direction: column;
     gap: 1rem;
     padding: 1.5rem;
-    padding-bottom: 2rem; /* Extra padding at bottom */
     background-color: var(--surface-color);
     border: 1px solid var(--border-color);
     border-radius: 12px;
@@ -174,14 +169,11 @@ body {
     overflow-y: auto;
     scroll-behavior: smooth;
     overscroll-behavior: contain; /* Prevent over-scrolling */
+    min-height: 0; /* Important for flex child */
 }
 
 /* Chat Input */
 .chat-input {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
     display: flex;
     gap: 0.75rem;
     padding: 1rem;
@@ -190,7 +182,7 @@ body {
     border-radius: 16px;
     box-shadow: var(--shadow);
     align-items: flex-end;
-    z-index: 10; /* Ensure it stays on top */
+    flex-shrink: 0; /* Prevent shrinking */
 }
 
 /* Chat Panel */
@@ -621,18 +613,26 @@ body {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent; /* Remove tap highlight on iOS */
+    touch-action: manipulation; /* Improve touch responsiveness */
 }
 
-.chat-input .upload-button:hover:not(:disabled) {
+.chat-input .upload-button:hover:not(.disabled),
+.chat-input .upload-button:active:not(.disabled) {
     background-color: var(--primary-color);
     color: white;
     border-color: var(--primary-color);
     transform: scale(1.05);
 }
 
-.chat-input .upload-button:disabled {
+.chat-input .upload-button:active:not(.disabled) {
+    transform: scale(0.95);
+}
+
+.chat-input .upload-button.disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    pointer-events: none;
 }
 
 
@@ -1066,77 +1066,282 @@ body {
     display: none !important;
 }
 
-/* Responsive */
+/* Mobile Responsive - Optimized for phones */
 @media (max-width: 768px) {
+    /* Base font size adjustment */
+    body {
+        font-size: 16px; /* Larger base font for readability */
+    }
+    
+    /* Navigation adjustments */
+    .nav-content {
+        padding: 0.75rem 1rem;
+    }
+    
+    .app-title {
+        font-size: 1.1rem; /* Smaller title to fit mobile */
+    }
+    
+    .nav-buttons {
+        gap: 0.25rem; /* Tighter spacing */
+    }
+    
+    .nav-buttons button {
+        padding: 0.5rem 0.6rem;
+        font-size: 0.85rem;
+        border-radius: 6px;
+    }
+    
+    /* Chat view optimizations */
     .chat-view {
-        padding: 1rem;
+        padding: 0.5rem;
         overflow: hidden;
     }
     
     .chat-panel-full {
-        height: 100%;
+        gap: 0.5rem;
     }
     
-    .chat-header {
-        padding: 1rem;
-    }
-    
+    /* Messages container */
     .chat-messages {
-        padding: 1rem;
-        bottom: 100px; /* Smaller input height on mobile */
-        padding-bottom: 1.5rem;
+        padding: 0.75rem;
+        border-radius: 8px;
+        margin-bottom: env(safe-area-inset-bottom, 0);
     }
     
+    /* Message bubbles */
+    .message-bubble {
+        padding: 0.75rem 1rem;
+        font-size: 15px; /* Comfortable reading size */
+        line-height: 1.4;
+        max-width: 85%; /* More width on mobile */
+    }
+    
+    .message-sender {
+        font-size: 0.75rem;
+        padding: 0 0.25rem;
+    }
+    
+    /* Chat input optimizations */
     .chat-input {
-        padding: 0.75rem;
-        border-radius: 12px; /* Less rounded on mobile for better space usage */
+        padding: 0.5rem;
+        gap: 0.5rem;
+        border-radius: 12px;
+        margin-bottom: env(safe-area-inset-bottom, 0);
     }
     
     .chat-input textarea {
         font-size: 16px; /* Prevent zoom on iOS */
+        padding: 0.6rem 0.8rem;
+        line-height: 1.3;
+        border-radius: 8px;
     }
     
-    .nav-content {
+    /* Buttons */
+    .chat-input .upload-button,
+    .chat-input .send-button {
+        width: 44px;
+        height: 44px;
+        font-size: 1.2rem;
+    }
+    
+    /* Thinking indicator */
+    .thinking-bubble {
+        padding: 0.5rem 1rem;
+    }
+    
+    .thinking-dots span {
+        width: 6px;
+        height: 6px;
+    }
+    
+    /* Settings view */
+    .settings-view {
         padding: 1rem;
     }
     
-    .nav-buttons {
+    .settings-group {
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+    }
+    
+    .settings-group h3 {
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .form-group label {
+        font-size: 0.9rem;
+        margin-bottom: 0.4rem;
+    }
+    
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+        font-size: 16px; /* Prevent zoom */
+        padding: 0.6rem;
+    }
+    
+    /* Wines view */
+    .wines-view {
+        padding: 1rem;
+    }
+    
+    .wines-header {
+        padding: 1.25rem;
+    }
+    
+    .wines-header h2 {
+        font-size: 1.4rem;
+    }
+    
+    .wines-grid {
+        grid-template-columns: 1fr; /* Single column on mobile */
+        gap: 1rem;
+    }
+    
+    .wine-card {
+        padding: 1rem;
+    }
+    
+    .wine-header h3 {
+        font-size: 1.1rem;
+    }
+    
+    .wine-detail {
+        font-size: 0.9rem;
+    }
+    
+    .wine-label {
+        font-size: 0.85rem;
+        min-width: 70px;
+    }
+    
+    /* Wine pricing on mobile */
+    .wine-pricing-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .wine-price-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        text-align: left;
+    }
+    
+    .wine-price-label {
+        font-size: 0.8rem;
+        margin-bottom: 0;
+    }
+    
+    .wine-price-amount {
+        font-size: 1.1rem;
+    }
+    
+    .wine-markup {
+        padding: 0.4rem 0.8rem;
+        margin-top: 0.5rem;
+    }
+    
+    .wine-section h4 {
+        font-size: 0.85rem;
+    }
+    
+    .wine-notes {
+        font-size: 0.85rem;
+        line-height: 1.3;
+    }
+    
+    /* Debug view */
+    .debug-view {
+        padding: 1rem;
+    }
+    
+    .debug-controls {
+        padding: 0.75rem;
+        flex-direction: column;
+        align-items: flex-start;
         gap: 0.5rem;
     }
     
-    .nav-buttons button {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.875rem;
+    .debug-toggle {
+        font-size: 0.9rem;
     }
     
+    .debug-entry {
+        margin-bottom: 0.75rem;
+    }
+    
+    .debug-header {
+        padding: 0.75rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .debug-timestamp {
+        font-size: 0.7rem;
+    }
+    
+    .debug-json {
+        font-size: 0.7rem;
+        padding: 0.75rem;
+    }
+    
+    /* Dropdown menu */
     .dropdown-menu {
         max-width: 90vw;
-        right: -1rem;
+        right: -0.5rem;
     }
     
-    /* Ensure no body scrolling on mobile */
+    /* General mobile optimizations */
     body {
         overscroll-behavior: none;
         -webkit-overflow-scrolling: touch;
     }
     
-    /* iOS Safari specific fixes */
+    /* Reduce shadows on mobile for performance */
+    :root {
+        --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* Tighter padding for containers */
+    .tab-container {
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+    }
+}
+
+/* Extra small phones (iPhone SE, etc.) */
+@media (max-width: 380px) {
+    .nav-content {
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .app-title {
+        font-size: 1rem;
+    }
+    
+    .nav-buttons button {
+        padding: 0.4rem 0.5rem;
+        font-size: 0.8rem;
+    }
+    
     .chat-view {
-        padding-bottom: env(safe-area-inset-bottom, 1rem);
+        padding: 0.25rem;
     }
     
-    /* Prevent viewport changes on keyboard */
-    .chat-input {
-        position: fixed;
-        bottom: env(safe-area-inset-bottom, 0);
-        left: 1rem;
-        right: 1rem;
-        max-width: calc(800px - 2rem);
-        margin: 0 auto;
+    .message-bubble {
+        font-size: 14px;
+        max-width: 90%;
     }
     
-    .chat-messages {
-        bottom: calc(100px + env(safe-area-inset-bottom, 0));
+    .wine-card {
+        padding: 0.75rem;
+    }
+    
+    .settings-group {
+        padding: 1rem;
     }
 }
 

@@ -65,14 +65,14 @@
                             style="display: none;"
                             id="wine-image-upload"
                         />
-                        <button 
-                            @click="$refs.imageInput.click()" 
+                        <label 
+                            for="wine-image-upload"
                             class="upload-button"
-                            :disabled="!apiKey || processing"
-                            title="Upload and analyze wine image"
+                            :class="{'disabled': !apiKey || processing}"
+                            :title="!apiKey ? 'Please set API key in Settings' : 'Upload and analyze wine image'"
                         >
                             📷
-                        </button>
+                        </label>
                         <textarea 
                             x-model="currentInput" 
                             @keydown="handleInputKeydown($event)"
